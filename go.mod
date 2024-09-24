@@ -19,10 +19,9 @@ require (
 	go.mongodb.org/mongo-driver v1.9.1
 	go.uber.org/zap v1.27.0
 	google.golang.org/protobuf v1.34.1
-	gopkg.in/yaml.v3 v3.0.1
+	github.com/hfd94/yaml  v1.0.2
 )
 
-replace gopkg.in/yaml.v3 v3.0.1 => github.com/hfd94/yaml v1.0.1
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
