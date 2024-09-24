@@ -76,6 +76,7 @@ github.com/hfd94/yaml v0.0.0-20240918081559-2483e8a04b95 h1:o/nYtn/zsn2WfgGAnDHw
 github.com/hfd94/yaml v0.0.0-20240918081559-2483e8a04b95/go.mod h1:Mi4gv25RAoPC9J2Tywz7r3nev1OjGwp00qCo/2wv3W4=
 github.com/hfd94/yaml v0.0.0-20240924152058-b24bf694aacc/go.mod h1:LyrcWvlX6XNcUl3inAFPHZjNjNt5glWu759/doS+QfI=
 github.com/hfd94/yaml v1.0.1/go.mod h1:Mi4gv25RAoPC9J2Tywz7r3nev1OjGwp00qCo/2wv3W4=
+github.com/hfd94/yaml v1.0.2/go.mod h1:LyrcWvlX6XNcUl3inAFPHZjNjNt5glWu759/doS+QfI=
 github.com/jcmturner/aescts/v2 v2.0.0 h1:9YKLH6ey7H4eDBXW8khjYslgyqG2xZikXP0EQFKrle8=
 github.com/jcmturner/aescts/v2 v2.0.0/go.mod h1:AiaICIRyfYg35RUkr8yESTqvSy7csK90qZ5xfvvsoNs=
 github.com/jcmturner/dnsutils/v2 v2.0.0 h1:lltnkeZGL0wILNvrNiVCR6Ro5PGU/SeBvVO/8c/iPbo=
