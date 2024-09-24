@@ -9,6 +9,7 @@ require (
 	github.com/gomodule/redigo v1.8.8
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.0
+	github.com/hfd94/yaml v0.0.0-20240924152058-b24bf694aacc
 	github.com/json-iterator/go v1.1.12
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/nats-io/nats.go v1.34.1
@@ -21,8 +22,6 @@ require (
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
 )
-
-replace gopkg.in/yaml.v3 v3.0.1 => github.com/hfd94/yaml v0.0.0-20240918081559-2483e8a04b95
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
