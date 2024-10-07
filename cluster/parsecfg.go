@@ -3,14 +3,15 @@ package cluster
 import (
 	"errors"
 	"fmt"
-	"github.com/duanhf2012/origin/v2/log"
-	"github.com/duanhf2012/origin/v2/rpc"
-	"github.com/hfd94/yaml"
-	jsoniter "github.com/json-iterator/go"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/duanhf2012/origin/v2/log"
+	"github.com/duanhf2012/origin/v2/rpc"
+	"github.com/hfd94/yaml"
+	jsoniter "github.com/json-iterator/go"
 )
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
@@ -44,7 +45,7 @@ const MinTTL = 3
 type DiscoveryInfo struct {
 	discoveryType DiscoveryType
 	Etcd          *EtcdDiscovery   //etcd
-	Origin        *OriginDiscovery //orign
+	Origin        *OriginDiscovery //origin
 }
 
 type NatsConfig struct {
@@ -260,10 +261,9 @@ func (cls *Cluster) readLocalClusterConfig(nodeId string) (DiscoveryInfo, []Node
 	for _, f := range fileInfoList {
 		if f.IsDir() == false {
 			filePath := strings.TrimRight(strings.TrimRight(clusterCfgPath, "/"), "\\") + "/" + f.Name()
-			fileNodeInfoList, rerr := cls.ReadClusterConfig(filePath)
-
-			if rerr != nil {
-				return discoveryInfo, nil, rpcMode, fmt.Errorf("read file path %s is error:%+v", filePath, rerr)
+			fileNodeInfoList, rErr := cls.ReadClusterConfig(filePath)
+			if rErr != nil {
+				return discoveryInfo, nil, rpcMode, fmt.Errorf("read file path %s is error:%+v", filePath, rErr)
 			}
 
 			err = cls.SetRpcMode(&fileNodeInfoList.RpcMode, &rpcMode)
@@ -288,7 +288,7 @@ func (cls *Cluster) readLocalClusterConfig(nodeId string) (DiscoveryInfo, []Node
 		return discoveryInfo, nil, rpcMode, fmt.Errorf("nodeid %s configuration error in NodeList", nodeId)
 	}
 
-	for i, _ := range nodeInfoList {
+	for i := range nodeInfoList {
 		for j, s := range nodeInfoList[i].ServiceList {
 			//私有结点不加入到Public服务列表中
 			if strings.HasPrefix(s, "_") == false && nodeInfoList[i].Private == false {
@@ -483,7 +483,7 @@ func (cls *Cluster) GetNodeIdByTemplateService(templateServiceName string, rpcCl
 	for serviceName := range mapServiceName {
 		mapNodeId, ok := cls.mapServiceNode[serviceName]
 		if ok == true {
-			for nodeId, _ := range mapNodeId {
+			for nodeId := range mapNodeId {
 				pClient, retire := GetCluster().getRpcClient(nodeId)
 				if pClient == nil || pClient.IsConnected() == false {
 					continue
@@ -507,7 +507,7 @@ func (cls *Cluster) GetNodeIdByService(serviceName string, rpcClientList []*rpc.
 	defer cls.locker.RUnlock()
 	mapNodeId, ok := cls.mapServiceNode[serviceName]
 	if ok == true {
-		for nodeId, _ := range mapNodeId {
+		for nodeId := range mapNodeId {
 			pClient, retire := GetCluster().getRpcClient(nodeId)
 			if pClient == nil || pClient.IsConnected() == false {
 				continue

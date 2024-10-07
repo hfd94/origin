@@ -3,14 +3,6 @@ package node
 import (
 	"errors"
 	"fmt"
-	"github.com/duanhf2012/origin/v2/cluster"
-	"github.com/duanhf2012/origin/v2/console"
-	"github.com/duanhf2012/origin/v2/log"
-	"github.com/duanhf2012/origin/v2/profiler"
-	"github.com/duanhf2012/origin/v2/service"
-	"github.com/duanhf2012/origin/v2/util/buildtime"
-	"github.com/duanhf2012/origin/v2/util/sysprocess"
-	"github.com/duanhf2012/origin/v2/util/timer"
 	"io"
 	"net/http"
 	_ "net/http/pprof"
@@ -20,6 +12,15 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/duanhf2012/origin/v2/cluster"
+	"github.com/duanhf2012/origin/v2/console"
+	"github.com/duanhf2012/origin/v2/log"
+	"github.com/duanhf2012/origin/v2/profiler"
+	"github.com/duanhf2012/origin/v2/service"
+	"github.com/duanhf2012/origin/v2/util/buildtime"
+	"github.com/duanhf2012/origin/v2/util/sysprocess"
+	"github.com/duanhf2012/origin/v2/util/timer"
 )
 
 var sig chan os.Signal
@@ -27,7 +28,6 @@ var nodeId string
 var preSetupService []service.IService //预安装
 var preSetupTemplateService []func() service.IService
 var profilerInterval time.Duration
-var bValid bool
 var configDir = "./config/"
 var IsRun = false
 
@@ -82,7 +82,7 @@ func usage(val interface{}) error {
 	return nil
 }
 
-func setName(val interface{}) error {
+func setName(_ interface{}) error {
 	return nil
 }
 
@@ -324,13 +324,13 @@ func startNode(args interface{}) error {
 		myName, mErr := sysprocess.GetMyProcessName()
 		//当前进程名获取失败，不应该发生
 		if mErr != nil {
-			log.SInfo("get my process's name is error,", mErr.Error())
+			log.Info("get my process's name is error", log.ErrorAttr("err", mErr))
 			os.Exit(-1)
 		}
 
 		//进程id存在，而且进程名也相同，被认为是当前进程重复运行
 		if cErr == nil && name == myName {
-			log.SInfo(fmt.Sprintf("repeat runs are not allowed,node is %s,processid is %d", strNodeId, processId))
+			log.Info("repeat runs are not allowed", log.String("nodeId", strNodeId), log.Int("processId", processId))
 			os.Exit(-1)
 		}
 		break
@@ -357,8 +357,8 @@ func startNode(args interface{}) error {
 		pProfilerTicker = time.NewTicker(profilerInterval)
 	}
 
-	IsRun = true
-	for IsRun {
+	NodeIsRun = true
+	for NodeIsRun {
 		select {
 		case s := <-sig:
 			_signal := s.(syscall.Signal)
@@ -366,7 +366,7 @@ func startNode(args interface{}) error {
 				log.Info("receipt retire signal.")
 				notifyAllServiceRetire()
 			} else {
-				IsRun = false
+				NodeIsRun = false
 				log.Info("receipt stop signal.")
 			}
 		case <-pProfilerTicker.C:
@@ -381,6 +381,11 @@ func startNode(args interface{}) error {
 	log.Info("Server is stop.")
 	log.Close()
 	return nil
+}
+
+type templateServicePoint[T any] interface {
+	*T
+	service.IService
 }
 
 func Setup(s ...service.IService) {
@@ -423,7 +428,7 @@ func openConsole(args interface{}) error {
 	} else if strOpen == "true" {
 		log.OpenConsole = true
 	} else {
-		return errors.New("Parameter console error!")
+		return errors.New("parameter console error")
 	}
 	return nil
 }

@@ -3,14 +3,15 @@ package cluster
 import (
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
+	"sync"
+
 	"github.com/duanhf2012/origin/v2/event"
 	"github.com/duanhf2012/origin/v2/log"
 	"github.com/duanhf2012/origin/v2/rpc"
 	"github.com/duanhf2012/origin/v2/service"
 	"github.com/mitchellh/mapstructure"
-	"reflect"
-	"strings"
-	"sync"
 )
 
 var configDir = "./config/"
@@ -114,22 +115,22 @@ func (cls *Cluster) DelNode(nodeId string) {
 	cls.locker.Lock()
 	defer cls.locker.Unlock()
 
-	rpc, ok := cls.mapRpc[nodeId]
+	nodeRpc, ok := cls.mapRpc[nodeId]
 	if ok == false {
 		return
 	}
 
-	cls.TriggerDiscoveryEvent(false, nodeId, rpc.nodeInfo.ServiceList)
-	for _, serviceName := range rpc.nodeInfo.ServiceList {
+	cls.TriggerDiscoveryEvent(false, nodeId, nodeRpc.nodeInfo.ServiceList)
+	for _, serviceName := range nodeRpc.nodeInfo.ServiceList {
 		cls.delServiceNode(serviceName, nodeId)
 	}
 
 	delete(cls.mapRpc, nodeId)
 	if ok == true {
-		rpc.client.Close(false)
+		nodeRpc.client.Close(false)
 	}
 
-	log.Info("remove node ", log.String("NodeId", rpc.nodeInfo.NodeId), log.String("ListenAddr", rpc.nodeInfo.ListenAddr))
+	log.Info("remove node ", log.String("NodeId", nodeRpc.nodeInfo.NodeId), log.String("ListenAddr", nodeRpc.nodeInfo.ListenAddr))
 }
 
 func (cls *Cluster) serviceDiscoveryDelNode(nodeId string) {
@@ -297,12 +298,12 @@ func GetRpcClient(nodeId string, serviceMethod string, filterRetire bool, client
 	if nodeId != rpc.NodeIdNull {
 		pClient, retire := GetCluster().GetRpcClient(nodeId)
 		if pClient == nil {
-			return fmt.Errorf("cannot find  nodeid %d!", nodeId), nil
+			return fmt.Errorf("cannot find  nodeid %s", nodeId), nil
 		}
 
 		//如果需要筛选掉退休结点
 		if filterRetire == true && retire == true {
-			return fmt.Errorf("cannot find  nodeid %d!", nodeId), nil
+			return fmt.Errorf("cannot find  nodeid %s", nodeId), nil
 		}
 
 		clientList = append(clientList, pClient)
@@ -315,7 +316,6 @@ func GetRpcClient(nodeId string, serviceMethod string, filterRetire bool, client
 	}
 	serviceName := serviceMethod[:findIndex]
 
-	//1.找到对应的rpcNodeid
 	return GetCluster().GetNodeIdByService(serviceName, clientList, filterRetire)
 }
 
@@ -340,7 +340,7 @@ func (cls *Cluster) NotifyAllService(event event.IEvent) {
 	cls.rpcEventLocker.Lock()
 	defer cls.rpcEventLocker.Unlock()
 
-	for serviceName, _ := range cls.mapServiceListenRpcEvent {
+	for serviceName := range cls.mapServiceListenRpcEvent {
 		ser := service.GetService(serviceName)
 		if ser == nil {
 			log.Error("cannot find service name " + serviceName)
@@ -403,7 +403,7 @@ func GetNodeByServiceName(serviceName string) map[string]struct{} {
 	}
 
 	mapNodeId := map[string]struct{}{}
-	for nodeId, _ := range mapNode {
+	for nodeId := range mapNode {
 		mapNodeId[nodeId] = struct{}{}
 	}
 
@@ -423,7 +423,7 @@ func GetNodeByTemplateServiceName(templateServiceName string) map[string]string 
 			return nil
 		}
 
-		for nodeId, _ := range mapNode {
+		for nodeId := range mapNode {
 			mapNodeId[serviceName] = nodeId
 		}
 	}

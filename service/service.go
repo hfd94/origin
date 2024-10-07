@@ -3,6 +3,12 @@ package service
 import (
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime"
+	"strconv"
+	"sync"
+	"sync/atomic"
+
 	"github.com/duanhf2012/origin/v2/concurrent"
 	"github.com/duanhf2012/origin/v2/event"
 	"github.com/duanhf2012/origin/v2/log"
@@ -10,11 +16,6 @@ import (
 	"github.com/duanhf2012/origin/v2/rpc"
 	"github.com/duanhf2012/origin/v2/util/timer"
 	"github.com/mitchellh/mapstructure"
-	"reflect"
-	"runtime"
-	"strconv"
-	"sync"
-	"sync/atomic"
 )
 
 var timerDispatcherLen = 100000
@@ -101,7 +102,7 @@ func (s *Service) OnSetup(iService IService) {
 func (s *Service) OpenProfiler() {
 	s.profiler = profiler.RegProfiler(s.GetName())
 	if s.profiler == nil {
-		log.Fatal("rofiler.RegProfiler " + s.GetName() + " fail.")
+		log.Fatal("profiler.RegProfiler " + s.GetName() + " fail.")
 	}
 }
 
@@ -164,8 +165,8 @@ func (s *Service) run() {
 	defer s.wg.Done()
 	var bStop = false
 
-	concurrent := s.IConcurrent.(*concurrent.Concurrent)
-	concurrentCBChannel := concurrent.GetCallBackChannel()
+	cr := s.IConcurrent.(*concurrent.Concurrent)
+	concurrentCBChannel := cr.GetCallBackChannel()
 
 	for {
 		var analyzer *profiler.Analyzer
@@ -173,13 +174,13 @@ func (s *Service) run() {
 		case <-s.closeSig:
 			bStop = true
 			s.Release()
-			concurrent.Close()
+			cr.Close()
 		case cb := <-concurrentCBChannel:
-			concurrent.DoCallback(cb)
+			cr.DoCallback(cb)
 		case ev := <-s.chanEvent:
 			switch ev.GetEventType() {
 			case event.Sys_Event_Retire:
-				log.Info("service OnRetire", log.String("servceName", s.GetName()))
+				log.Info("service OnRetire", log.String("serviceName", s.GetName()))
 				s.self.(IService).OnRetire()
 			case event.ServiceRpcRequestEvent:
 				cEvent, ok := ev.(*event.Event)
@@ -325,11 +326,11 @@ func (s *Service) OnStart() {
 }
 
 func (s *Service) OnNodeConnEvent(ev event.IEvent) {
-	event := ev.(*rpc.RpcConnEvent)
-	if event.IsConnect {
-		s.nodeConnLister.OnNodeConnected(event.NodeId)
+	re := ev.(*rpc.RpcConnEvent)
+	if re.IsConnect {
+		s.nodeConnLister.OnNodeConnected(re.NodeId)
 	} else {
-		s.nodeConnLister.OnNodeDisconnect(event.NodeId)
+		s.nodeConnLister.OnNodeDisconnect(re.NodeId)
 	}
 }
 
@@ -343,11 +344,11 @@ func (s *Service) OnNatsConnEvent(ev event.IEvent) {
 }
 
 func (s *Service) OnDiscoverServiceEvent(ev event.IEvent) {
-	event := ev.(*DiscoveryServiceEvent)
-	if event.IsDiscovery {
-		s.discoveryServiceLister.OnDiscoveryService(event.NodeId, event.ServiceName)
+	de := ev.(*DiscoveryServiceEvent)
+	if de.IsDiscovery {
+		s.discoveryServiceLister.OnDiscoveryService(de.NodeId, de.ServiceName)
 	} else {
-		s.discoveryServiceLister.OnUnDiscoveryService(event.NodeId, event.ServiceName)
+		s.discoveryServiceLister.OnUnDiscoveryService(de.NodeId, de.ServiceName)
 	}
 }
 
@@ -406,7 +407,7 @@ func (s *Service) PushEvent(ev event.IEvent) error {
 
 func (s *Service) pushEvent(ev event.IEvent) error {
 	if len(s.chanEvent) >= maxServiceEventChannelNum {
-		err := errors.New("The event channel in the service is full")
+		err := errors.New("the event channel in the service is full")
 		log.Error(err.Error())
 		return err
 	}

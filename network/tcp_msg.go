@@ -17,9 +17,8 @@ type MsgParser struct {
 	MaxMsgLen    uint32
 	LittleEndian bool
 
-	bytespool.IBytesMempool
+	bytespool.IBytesMemPool
 }
-
 
 func (p *MsgParser) getMaxMsgLen(lenMsgLen int) uint32 {
 	switch p.LenMsgLen {
@@ -34,17 +33,17 @@ func (p *MsgParser) getMaxMsgLen(lenMsgLen int) uint32 {
 	}
 }
 
-func (p *MsgParser) init(){
-	p.IBytesMempool = bytespool.NewMemAreaPool()
+func (p *MsgParser) Init() {
+	p.IBytesMemPool = bytespool.NewMemAreaPool()
 }
 
 // goroutine safe
-func (p *MsgParser) Read(conn *TCPConn) ([]byte, error) {
+func (p *MsgParser) Read(r io.Reader) ([]byte, error) {
 	var b [4]byte
 	bufMsgLen := b[:p.LenMsgLen]
 
 	// read len
-	if _, err := io.ReadFull(conn, bufMsgLen); err != nil {
+	if _, err := io.ReadFull(r, bufMsgLen); err != nil {
 		return nil, err
 	}
 
@@ -73,10 +72,10 @@ func (p *MsgParser) Read(conn *TCPConn) ([]byte, error) {
 	} else if msgLen < p.MinMsgLen {
 		return nil, errors.New("message too short")
 	}
-	
+
 	// data
 	msgData := p.MakeBytes(int(msgLen))
-	if _, err := io.ReadFull(conn, msgData[:msgLen]); err != nil {
+	if _, err := io.ReadFull(r, msgData[:msgLen]); err != nil {
 		p.ReleaseBytes(msgData)
 		return nil, err
 	}
@@ -85,7 +84,7 @@ func (p *MsgParser) Read(conn *TCPConn) ([]byte, error) {
 }
 
 // goroutine safe
-func (p *MsgParser) Write(conn *TCPConn, args ...[]byte) error {
+func (p *MsgParser) Write(conn io.Writer, args ...[]byte) error {
 	// get len
 	var msgLen uint32
 	for i := 0; i < len(args); i++ {
@@ -100,7 +99,7 @@ func (p *MsgParser) Write(conn *TCPConn, args ...[]byte) error {
 	}
 
 	//msg := make([]byte, uint32(p.lenMsgLen)+msgLen)
-	msg := p.MakeBytes(p.LenMsgLen+int(msgLen))
+	msg := p.MakeBytes(p.LenMsgLen + int(msgLen))
 	// write len
 	switch p.LenMsgLen {
 	case 1:
@@ -129,4 +128,10 @@ func (p *MsgParser) Write(conn *TCPConn, args ...[]byte) error {
 	conn.Write(msg)
 
 	return nil
+}
+
+func (p *MsgParser) GetRecyclerReaderBytes() func(data []byte) {
+	return func(data []byte) {
+		p.IBytesMemPool.ReleaseBytes(data)
+	}
 }

@@ -3,14 +3,15 @@ package rpc
 import (
 	"errors"
 	"fmt"
-	"github.com/duanhf2012/origin/v2/event"
-	"github.com/duanhf2012/origin/v2/log"
 	"reflect"
 	"runtime"
 	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/duanhf2012/origin/v2/event"
+	"github.com/duanhf2012/origin/v2/log"
 )
 
 const maxClusterNode int = 32
@@ -67,7 +68,7 @@ type RpcHandler struct {
 	//pClientList []*Client
 }
 
-// type TriggerRpcConnEvent func(bConnect bool, clientSeq uint32, nodeId string)
+// NotifyEventToAllService type TriggerRpcConnEvent func(bConnect bool, clientSeq uint32, nodeId string)
 type NotifyEventToAllService func(event event.IEvent)
 
 type INodeConnListener interface {
@@ -311,15 +312,15 @@ func (handler *RpcHandler) HandlerRpcRequest(request *RpcRequest) {
 		return
 	}
 
-	requestHanle := request.requestHandle
+	requestHandle := request.requestHandle
 	returnValues := v.method.Func.Call(paramList)
 	errInter := returnValues[0].Interface()
 	if errInter != nil {
 		err = errInter.(error)
 	}
 
-	if v.hasResponder == false && requestHanle != nil {
-		requestHanle(oParam.Interface(), ConvertError(err))
+	if v.hasResponder == false && requestHandle != nil {
+		requestHandle(oParam.Interface(), ConvertError(err))
 	}
 }
 
@@ -349,7 +350,7 @@ func (handler *RpcHandler) CallMethod(client *Client, ServiceMethod string, para
 		//有返回值时
 		if reply != nil {
 			//如果是Call同步调用
-			hander := func(Returns interface{}, Err RpcError) {
+			hd := func(Returns interface{}, Err RpcError) {
 				rpcCall := client.RemovePending(callSeq)
 				if rpcCall == nil {
 					log.Error("cannot find call seq", log.Uint64("seq", callSeq))
@@ -372,7 +373,7 @@ func (handler *RpcHandler) CallMethod(client *Client, ServiceMethod string, para
 				rpcCall.Reply = reply
 				rpcCall.done <- rpcCall
 			}
-			paramList = append(paramList, reflect.ValueOf(hander))
+			paramList = append(paramList, reflect.ValueOf(hd))
 		} else { //无返回值时,是一个requestHandlerNull空回调
 			paramList = append(paramList, callBack)
 		}
@@ -514,9 +515,9 @@ func (handler *RpcHandler) asyncCallRpc(timeout time.Duration, nodeId string, se
 	if len(pClientList) == 0 || err != nil {
 		if err == nil {
 			if nodeId != NodeIdNull {
-				err = fmt.Errorf("cannot find %s from nodeId %d", serviceMethod, nodeId)
+				err = fmt.Errorf("cannot find %s from nodeId %s", serviceMethod, nodeId)
 			} else {
-				err = fmt.Errorf("No %s service found in the origin network", serviceMethod)
+				err = fmt.Errorf("no %s service found in the origin network", serviceMethod)
 			}
 		}
 		fVal.Call([]reflect.Value{reflect.ValueOf(reply), reflect.ValueOf(err)})

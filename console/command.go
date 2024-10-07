@@ -35,9 +35,9 @@ func (cmd *command) execute() error {
 		return cmd.fn(cmd.strValue)
 	} else if cmd.valType == intType {
 		return cmd.fn(cmd.intValue)
-	} else {
-		return fmt.Errorf("unknow command type")
 	}
+
+	return fmt.Errorf("unknow command type")
 }
 
 func Run(args []string) error {
