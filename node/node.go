@@ -29,7 +29,7 @@ var preSetupService []service.IService //预安装
 var preSetupTemplateService []func() service.IService
 var profilerInterval time.Duration
 var configDir = "./config/"
-var IsRun = false
+var NodeIsRun = false
 
 const (
 	SingleStop   syscall.Signal = 10
