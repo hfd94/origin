@@ -15,9 +15,15 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
+
 type EtcdList struct {
 	NetworkName []string
 	Endpoints   []string
+	UserName string
+	Password string
+	Cert string
+	CertKey string
+	Ca string
 }
 
 type EtcdDiscovery struct {

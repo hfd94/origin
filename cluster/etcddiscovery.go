@@ -13,10 +13,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"path"
 	"strings"
 	"sync/atomic"
+	"io/ioutil"
+	"crypto/x509"
+	"crypto/tls"
 )
 
 const originDir = "/origin"
@@ -40,10 +42,15 @@ type EtcdDiscoveryService struct {
 	mapDiscoveryNodeId map[string]map[string]struct{} //map[networkName]map[nodeId]
 }
 
+var  etcdDiscovery *EtcdDiscoveryService
 func getEtcdDiscovery() IServiceDiscovery {
-	etcdDiscovery := &EtcdDiscoveryService{}
+	if etcdDiscovery == nil {
+		etcdDiscovery = &EtcdDiscoveryService{}
+	}
+
 	return etcdDiscovery
 }
+
 
 func (ed *EtcdDiscoveryService) InitDiscovery(localNodeId string, funDelNode FunDelNode, funSetNode FunSetNode) error {
 	ed.localNodeId = localNodeId
@@ -87,15 +94,44 @@ func (ed *EtcdDiscoveryService) OnInit() error {
 	}
 
 	for i := 0; i < len(etcdDiscoveryCfg.EtcdList); i++ {
-		client, cerr := clientv3.New(clientv3.Config{
+		var client *clientv3.Client
+		var tlsConfig *tls.Config
+
+		if etcdDiscoveryCfg.EtcdList[i].Cert != "" {
+			// load cert
+			cert, cerr := tls.LoadX509KeyPair(etcdDiscoveryCfg.EtcdList[i].Cert, etcdDiscoveryCfg.EtcdList[i].CertKey)
+			if cerr != nil {
+				log.Error("load cert error", log.ErrorField("err", cerr))
+				return cerr
+			}
+
+			// load root ca
+			caData, cerr := ioutil.ReadFile(etcdDiscoveryCfg.EtcdList[i].Ca)
+			if cerr != nil {
+				log.Error("load root ca error", log.ErrorField("err", cerr))
+				return cerr
+			}
+			pool := x509.NewCertPool()
+			pool.AppendCertsFromPEM(caData)
+			tlsConfig = &tls.Config{
+				Certificates: []tls.Certificate{cert},
+				RootCAs:      pool,
+			}
+		}
+
+		client, err = clientv3.New(clientv3.Config{
 			Endpoints:   etcdDiscoveryCfg.EtcdList[i].Endpoints,
 			DialTimeout: etcdDiscoveryCfg.DialTimeoutMillisecond,
-			Logger:      zap.NewNop(),
+			Username: etcdDiscoveryCfg.EtcdList[i].UserName,
+			Password: etcdDiscoveryCfg.EtcdList[i].Password,
+			Logger:      log.GetLogger().Logger,
+			TLS: tlsConfig,
 		})
 
-		if cerr != nil {
-			log.Error("etcd discovery init fail", log.ErrorField("err", cerr))
-			return cerr
+
+		if err != nil {
+			log.Error("etcd discovery init fail", log.ErrorField("err", err))
+			return err
 		}
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
