@@ -124,7 +124,7 @@ func (t *Timer) IsOpen() bool {
 func (t *Timer) Do() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(fmt.Sprint(r))
 		}
 	}()
 
@@ -207,7 +207,7 @@ func (c *Cron) Reset() {
 func (c *Cron) Do() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Errorf(fmt.Sprint(r))
 		}
 	}()
 
@@ -260,7 +260,7 @@ func (c *Cron) UnRef() {
 func (c *Ticker) Do() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(fmt.Sprint(r))
 		}
 	}()
 

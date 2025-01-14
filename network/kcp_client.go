@@ -41,23 +41,23 @@ func (client *KCPClient) init() {
 
 	if client.ConnNum <= 0 {
 		client.ConnNum = 1
-		log.Info("invalid ConnNum", log.Int("reset", client.ConnNum))
+		log.Debugf("invalid ConnNum,reset:%d", client.ConnNum)
 	}
 	if client.ConnectInterval <= 0 {
 		client.ConnectInterval = 3 * time.Second
-		log.Info("invalid ConnectInterval", log.Duration("reset", client.ConnectInterval))
+		log.Debugf("invalid ConnectInterval,reset:%d", client.ConnectInterval)
 	}
 	if client.PendingWriteNum <= 0 {
 		client.PendingWriteNum = 1000
-		log.Info("invalid PendingWriteNum", log.Int("reset", client.PendingWriteNum))
+		log.Debugf("invalid PendingWriteNum,reset:%d", client.PendingWriteNum)
 	}
 	if client.ReadDeadline == 0 {
 		client.ReadDeadline = 15 * time.Second
-		log.Info("invalid ReadDeadline", log.Int64("reset", int64(client.ReadDeadline.Seconds())))
+		log.Debugf("invalid ReadDeadline,reset:%d", int64(client.ReadDeadline.Seconds()))
 	}
 	if client.WriteDeadline == 0 {
 		client.WriteDeadline = 15 * time.Second
-		log.Info("invalid WriteDeadline", log.Int64("reset", int64(client.WriteDeadline.Seconds())))
+		log.Debugf("invalid WriteDeadline,reset:%d", int64(client.WriteDeadline.Seconds()))
 	}
 	if client.NewAgent == nil {
 		log.Fatal("NewAgent must not be nil")
@@ -78,7 +78,7 @@ func (client *KCPClient) init() {
 	maxMsgLen := client.MsgParser.getMaxMsgLen()
 	if client.MaxMsgLen > maxMsgLen {
 		client.MaxMsgLen = maxMsgLen
-		log.Info("invalid MaxMsgLen", log.Uint32("reset", maxMsgLen))
+		log.Debugf("invalid MaxMsgLen,reset:%d", maxMsgLen)
 	}
 
 	client.cons = make(ConnSet)
@@ -106,7 +106,7 @@ func (client *KCPClient) dial() net.Conn {
 			return conn
 		}
 
-		log.Warn("connect error ", log.String("error", err.Error()), log.String("Addr", client.Addr))
+		log.Warnf("connect error, error:%s,addr:%s", err.Error(), client.Addr)
 		time.Sleep(client.ConnectInterval)
 		continue
 	}

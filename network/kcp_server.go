@@ -203,7 +203,7 @@ func (kp *KCPServer) initSession(session *kcp.UDPSession) {
 func (kp *KCPServer) run(listener *kcp.Listener) bool {
 	conn, err := listener.Accept()
 	if err != nil {
-		log.Error("accept error", log.String("ListenAddr", kp.kcpCfg.ListenAddr), log.ErrorField("err", err))
+		log.Errorf("accept error, listenAddr:%s,err:%s", kp.kcpCfg.ListenAddr, err)
 		return false
 	}
 

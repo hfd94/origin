@@ -13,7 +13,7 @@ func F(callback interface{}, recoverNum int, args ...interface{}) {
 			var coreInfo string
 			coreInfo = string(debug.Stack())
 			coreInfo += "\n" + fmt.Sprintf("Core information is %v\n", r)
-			log.SError(coreInfo)
+			log.Error(coreInfo)
 			if recoverNum > 0 {
 				recoverNum -= 1
 			}

@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"github.com/duanhf2012/origin/v2/log"
 	"sync"
 )
@@ -14,12 +13,12 @@ type IEvent interface {
 }
 
 type Event struct {
-	Type EventType
-	Data interface{}
-	IntExt [2]int64
+	Type      EventType
+	Data      interface{}
+	IntExt    [2]int64
 	StringExt [2]string
-	AnyExt [2]any
-	ref  bool
+	AnyExt    [2]any
+	ref       bool
 }
 
 var emptyEvent Event
@@ -214,7 +213,7 @@ func (handler *EventHandler) Destroy() {
 func (processor *EventProcessor) EventHandler(ev IEvent) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(r)
 		}
 	}()
 

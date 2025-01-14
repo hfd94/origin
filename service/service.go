@@ -3,7 +3,6 @@ package service
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/duanhf2012/origin/v2/concurrent"
 	"github.com/duanhf2012/origin/v2/event"
 	"github.com/duanhf2012/origin/v2/log"
@@ -178,7 +177,7 @@ func (s *Service) run() {
 		case ev := <-s.chanEvent:
 			switch ev.GetEventType() {
 			case event.Sys_Event_Retire:
-				log.Info("service OnRetire", log.String("serviceName", s.GetName()))
+				log.Debugf("service OnRetire,serviceName:%s", s.GetName())
 				s.self.(IService).OnRetire()
 			case event.ServiceRpcRequestEvent:
 				cEvent, ok := ev.(*event.Event)
@@ -260,13 +259,13 @@ func (s *Service) SetName(serviceName string) {
 func (s *Service) Release() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(r)
 		}
 	}()
 
 	if atomic.AddInt32(&s.isRelease, -1) == -1 {
 		s.self.OnRelease()
-		for i:=len(s.child)-1; i>=0; i-- {
+		for i := len(s.child) - 1; i >= 0; i-- {
 			s.ReleaseModule(s.child[i].GetModuleId())
 		}
 	}

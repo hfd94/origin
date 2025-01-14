@@ -48,7 +48,7 @@ func (handler *WSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := handler.upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Error("upgrade fail", log.String("error", err.Error()))
+		log.Errorf("upgrade fail,error:%s", err.Error())
 		return
 	}
 	conn.SetReadLimit(int64(handler.maxMsgLen))
@@ -98,25 +98,25 @@ func (server *WSServer) SetMessageType(messageType int) {
 func (server *WSServer) Start() error {
 	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
-		log.Error("WSServer Listen fail", log.String("error", err.Error()))
+		log.Errorf("WSServer Listen fail,error:%s", err.Error())
 		return err
 	}
 
 	if server.MaxConnNum <= 0 {
 		server.MaxConnNum = 100
-		log.Info("invalid MaxConnNum", log.Int("reset", server.MaxConnNum))
+		log.Info("invalid MaxConnNum,reset:%d", server.MaxConnNum)
 	}
 	if server.PendingWriteNum <= 0 {
 		server.PendingWriteNum = 100
-		log.Info("invalid PendingWriteNum", log.Int("reset", server.PendingWriteNum))
+		log.Info("invalid PendingWriteNum,reset:%d", server.PendingWriteNum)
 	}
 	if server.MaxMsgLen <= 0 {
 		server.MaxMsgLen = 4096
-		log.Info("invalid MaxMsgLen", log.Uint32("reset", server.MaxMsgLen))
+		log.Info("invalid MaxMsgLen,reset:%d", server.MaxMsgLen)
 	}
 	if server.HTTPTimeout <= 0 {
 		server.HTTPTimeout = 10 * time.Second
-		log.Info("invalid HTTPTimeout", log.Duration("reset", server.HTTPTimeout))
+		log.Info("invalid HTTPTimeout,reset:%d", server.HTTPTimeout)
 	}
 	if server.NewAgent == nil {
 		log.Error("NewAgent must not be nil")
@@ -130,7 +130,7 @@ func (server *WSServer) Start() error {
 		config.Certificates = make([]tls.Certificate, 1)
 		config.Certificates[0], err = tls.LoadX509KeyPair(server.CertFile, server.KeyFile)
 		if err != nil {
-			log.Error("LoadX509KeyPair fail", log.String("error", err.Error()))
+			log.Errorf("LoadX509KeyPair fail,error:%s", err.Error())
 			return err
 		}
 

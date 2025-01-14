@@ -14,7 +14,7 @@ type WSClient struct {
 	ConnectInterval  time.Duration
 	PendingWriteNum  int
 	MaxMsgLen        uint32
-	MessageType		 int
+	MessageType      int
 	HandshakeTimeout time.Duration
 	AutoReconnect    bool
 	NewAgent         func(*WSConn) Agent
@@ -22,7 +22,6 @@ type WSClient struct {
 	cons             WebsocketConnSet
 	wg               sync.WaitGroup
 	closeFlag        bool
-
 }
 
 func (client *WSClient) Start() {
@@ -40,23 +39,23 @@ func (client *WSClient) init() {
 
 	if client.ConnNum <= 0 {
 		client.ConnNum = 1
-		log.Info("invalid ConnNum",log.Int("reset", client.ConnNum))
+		log.Debugf("invalid ConnNum,reset:%d", client.ConnNum)
 	}
 	if client.ConnectInterval <= 0 {
 		client.ConnectInterval = 3 * time.Second
-		log.Info("invalid ConnectInterval",log.Duration("reset", client.ConnectInterval))
+		log.Debugf("invalid ConnectInterval,reset:%d", client.ConnectInterval)
 	}
 	if client.PendingWriteNum <= 0 {
 		client.PendingWriteNum = 100
-		log.Info("invalid PendingWriteNum",log.Int("reset", client.PendingWriteNum))
+		log.Debugf("invalid PendingWriteNum,reset:%d", client.PendingWriteNum)
 	}
 	if client.MaxMsgLen <= 0 {
 		client.MaxMsgLen = 4096
-		log.Info("invalid MaxMsgLen",log.Uint32("reset", client.MaxMsgLen))
+		log.Debugf("invalid MaxMsgLen,reset:%d", client.MaxMsgLen)
 	}
 	if client.HandshakeTimeout <= 0 {
 		client.HandshakeTimeout = 10 * time.Second
-		log.Info("invalid HandshakeTimeout",log.Duration("reset", client.HandshakeTimeout))
+		log.Debugf("invalid HandshakeTimeout,reset:%d", client.HandshakeTimeout)
 	}
 	if client.NewAgent == nil {
 		log.Fatal("NewAgent must not be nil")
@@ -83,7 +82,7 @@ func (client *WSClient) dial() *websocket.Conn {
 			return conn
 		}
 
-		log.Info("connect fail", log.String("error",err.Error()),log.String("addr",client.Addr))
+		log.Infof("connect fail,error:%s,addr:%s", err.Error(), client.Addr)
 		time.Sleep(client.ConnectInterval)
 		continue
 	}
@@ -108,7 +107,7 @@ reconnect:
 	client.cons[conn] = struct{}{}
 	client.Unlock()
 
-	wsConn := newWSConn(conn,nil, client.PendingWriteNum, client.MaxMsgLen,client.MessageType)
+	wsConn := newWSConn(conn, nil, client.PendingWriteNum, client.MaxMsgLen, client.MessageType)
 	agent := client.NewAgent(wsConn)
 	agent.Run()
 

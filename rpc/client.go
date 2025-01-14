@@ -104,19 +104,19 @@ func (client *Client) processRpcResponse(responseData []byte) error {
 	//rc.conn.ReleaseReadMsg(bytes)
 	if err != nil {
 		processor.ReleaseRpcResponse(response.RpcResponseData)
-		log.Error("rpcClient Unmarshal head error", log.ErrorField("error", err))
+		log.Errorf("rpcClient Unmarshal head error:%s", err)
 		return nil
 	}
 
 	v := client.RemovePending(response.RpcResponseData.GetSeq())
 	if v == nil {
-		log.Error("rpcClient cannot find seq", log.Uint64("seq", response.RpcResponseData.GetSeq()))
+		log.Errorf("rpcClient cannot find seq:%d", response.RpcResponseData.GetSeq())
 	} else {
 		v.Err = nil
 		if len(response.RpcResponseData.GetReply()) > 0 {
 			err = processor.Unmarshal(response.RpcResponseData.GetReply(), v.Reply)
 			if err != nil {
-				log.Error("rpcClient Unmarshal body failed", log.ErrorField("error", err))
+				log.Errorf("rpcClient Unmarshal body failed,error:%s", err)
 				v.Err = err
 			}
 		}
@@ -163,7 +163,7 @@ func (client *Client) rawGo(nodeId string, w IWriter, timeout time.Duration, rpc
 
 	if err != nil {
 		call.Seq = 0
-		log.Error("marshal is fail", log.String("error", err.Error()))
+		log.Errorf("marshal is fail,error:%s", err.Error())
 		call.DoError(err)
 		return call
 	}
@@ -171,7 +171,7 @@ func (client *Client) rawGo(nodeId string, w IWriter, timeout time.Duration, rpc
 	if w == nil || w.IsConnected() == false {
 		call.Seq = 0
 		sErr := errors.New(serviceMethod + "  was called failed,rpc client is disconnect")
-		log.Error("conn is disconnect", log.String("error", sErr.Error()))
+		log.Errorf("conn is disconnect,error:%s", sErr.Error())
 		call.DoError(sErr)
 		return call
 	}
@@ -183,7 +183,7 @@ func (client *Client) rawGo(nodeId string, w IWriter, timeout time.Duration, rpc
 		compressBuff, cErr = compressor.CompressBlock(bytes)
 		if cErr != nil {
 			call.Seq = 0
-			log.Error("compress fail", log.String("error", cErr.Error()))
+			log.Errorf("compress fail,error:%s", cErr.Error())
 			call.DoError(cErr)
 			return call
 		}
@@ -203,7 +203,7 @@ func (client *Client) rawGo(nodeId string, w IWriter, timeout time.Duration, rpc
 	}
 	if err != nil {
 		client.RemovePending(call.Seq)
-		log.Error("WriteMsg is fail", log.ErrorField("error", err))
+		log.Errorf("WriteMsg is fail,error:%s", err)
 		call.Seq = 0
 		call.DoError(err)
 	}
@@ -263,7 +263,6 @@ func (client *Client) asyncCall(nodeId string, w IWriter, timeout time.Duration,
 		ReleaseCall(call)
 		return emptyCancelRpc, err
 	}
-
 
 	rpcCancel := RpcCancel{CallSeq: seq, Cli: client}
 	return rpcCancel.CancelRpc, nil

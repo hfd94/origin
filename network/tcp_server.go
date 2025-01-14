@@ -57,43 +57,43 @@ func (server *TCPServer) init() error {
 
 	if server.MaxConnNum <= 0 {
 		server.MaxConnNum = Default_MaxConnNum
-		log.Info("invalid MaxConnNum", log.Int("reset", server.MaxConnNum))
+		log.Debugf("invalid MaxConnNum,reset:%d", server.MaxConnNum)
 	}
 
 	if server.PendingWriteNum <= 0 {
 		server.PendingWriteNum = Default_PendingWriteNum
-		log.Info("invalid PendingWriteNum", log.Int("reset", server.PendingWriteNum))
+		log.Debugf("invalid PendingWriteNum,reset:%d", server.PendingWriteNum)
 	}
 
 	if server.LenMsgLen <= 0 {
 		server.LenMsgLen = Default_LenMsgLen
-		log.Info("invalid LenMsgLen", log.Int("reset", server.LenMsgLen))
+		log.Debugf("invalid LenMsgLen,reset:%d", server.LenMsgLen)
 	}
 
 	if server.MaxMsgLen <= 0 {
 		server.MaxMsgLen = Default_MaxMsgLen
-		log.Info("invalid MaxMsgLen", log.Uint32("reset to", server.MaxMsgLen))
+		log.Debugf("invalid MaxMsgLen,reset:%d", server.MaxMsgLen)
 	}
 
 	maxMsgLen := server.MsgParser.getMaxMsgLen()
 	if server.MaxMsgLen > maxMsgLen {
 		server.MaxMsgLen = maxMsgLen
-		log.Info("invalid MaxMsgLen", log.Uint32("reset", maxMsgLen))
+		log.Debugf("invalid MaxMsgLen,reset:%d", maxMsgLen)
 	}
 
 	if server.MinMsgLen <= 0 {
 		server.MinMsgLen = Default_MinMsgLen
-		log.Info("invalid MinMsgLen", log.Uint32("reset", server.MinMsgLen))
+		log.Debugf("invalid MinMsgLen,reset:%d", server.MinMsgLen)
 	}
 
 	if server.WriteDeadline == 0 {
 		server.WriteDeadline = Default_WriteDeadline
-		log.Info("invalid WriteDeadline", log.Int64("reset", int64(server.WriteDeadline.Seconds())))
+		log.Debugf("invalid WriteDeadline,reset:%d", int64(server.WriteDeadline.Seconds()))
 	}
 
 	if server.ReadDeadline == 0 {
 		server.ReadDeadline = Default_ReadDeadline
-		log.Info("invalid ReadDeadline", log.Int64("reset", int64(server.ReadDeadline.Seconds())))
+		log.Debugf("invalid ReadDeadline,reset:%d", int64(server.ReadDeadline.Seconds()))
 	}
 
 	if server.NewAgent == nil {
@@ -130,7 +130,7 @@ func (server *TCPServer) run() {
 					tempDelay *= 2
 				}
 
-				log.Info("accept fail", log.String("error", err.Error()), log.Duration("sleep time", tempDelay))
+				log.Infof("accept fail,error:%s,sleep time:%d", err.Error(), tempDelay)
 				tempDelay = min(1*time.Second, tempDelay)
 				time.Sleep(tempDelay)
 				continue

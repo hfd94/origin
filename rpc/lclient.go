@@ -43,7 +43,7 @@ func (lc *LClient) Go(nodeId string, timeout time.Duration, rpcHandler IRpcHandl
 	findIndex := strings.Index(serviceMethod, ".")
 	if findIndex == -1 {
 		sErr := errors.New("Call serviceMethod " + serviceMethod + " is error!")
-		log.Error("call rpc fail", log.String("error", sErr.Error()))
+		log.Errorf("call rpc fail,error:%s", sErr.Error())
 		call := MakeCall()
 		call.DoError(sErr)
 
@@ -98,7 +98,7 @@ func (lc *LClient) AsyncCall(nodeId string, timeout time.Duration, rpcHandler IR
 	if findIndex == -1 {
 		err := errors.New("Call serviceMethod " + serviceMethod + " is error!")
 		callback.Call([]reflect.Value{reflect.ValueOf(reply), reflect.ValueOf(err)})
-		log.Error("serviceMethod format is error", log.String("error", err.Error()))
+		log.Errorf("serviceMethod format is error:%s", err.Error())
 		return emptyCancelRpc, nil
 	}
 

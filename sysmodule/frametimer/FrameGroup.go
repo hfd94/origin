@@ -187,7 +187,7 @@ func (fg *FrameGroup) CancelTimer(timerID FrameTimerID) {
 
 	td := fg.ft.getTimerData(timerID)
 	if td == nil {
-		log.Error("cannot find timer", log.Uint64("timerID", uint64(timerID)))
+		log.Errorf("cannot find timer,timerID:%d", timerID)
 		return
 	}
 
@@ -197,7 +197,7 @@ func (fg *FrameGroup) CancelTimer(timerID FrameTimerID) {
 	fg.refreshMinFrame()
 }
 
-func (fg *FrameGroup) Close(){
+func (fg *FrameGroup) Close() {
 	fg.ft.removeGroup(fg.groupID, fg.preGlobalFrameNum)
-	delete(fg.ft.mapGroup,fg.groupID)
+	delete(fg.ft.mapGroup, fg.groupID)
 }

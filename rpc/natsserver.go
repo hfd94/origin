@@ -25,18 +25,18 @@ func (ns *NatsServer) Start() error {
 	var options []nats.Option
 
 	options = append(options, nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
-		log.Error("nats is disconnected", log.String("connUrl", nc.ConnectedUrl()))
+		log.Infof("nats is disconnected,connUrl:%s", nc.ConnectedUrl())
 		ns.notifyEventFun(&NatsConnEvent{IsConnect: false})
 	}))
 
 	options = append(options, nats.ConnectHandler(func(nc *nats.Conn) {
-		log.Info("nats is connected", log.String("connUrl", nc.ConnectedUrl()))
+		log.Infof("nats is connected,connUrl:%s", nc.ConnectedUrl())
 		ns.notifyEventFun(&NatsConnEvent{IsConnect: true})
 	}))
 
 	options = append(options, nats.ReconnectHandler(func(nc *nats.Conn) {
 		ns.notifyEventFun(&NatsConnEvent{IsConnect: true})
-		log.Info("nats is reconnected", log.String("connUrl", nc.ConnectedUrl()))
+		log.Infof("nats is reconnected,connUrl:%s", nc.ConnectedUrl())
 	}))
 
 	options = append(options, nats.MaxReconnects(-1))
@@ -48,7 +48,7 @@ func (ns *NatsServer) Start() error {
 
 	ns.natsConn, err = nats.Connect(ns.natsUrl, options...)
 	if err != nil {
-		log.Error("Connect to nats fail", log.String("natsUrl", ns.natsUrl), log.ErrorField("err", err))
+		log.Errorf("Connect to nats fail,natsUrl:[%s],error:%s", ns.natsUrl, err)
 		return err
 	}
 
@@ -77,7 +77,7 @@ func (ns *NatsServer) WriteResponse(processor IRpcProcessor, nodeId string, serv
 	defer processor.ReleaseRpcResponse(rpcResponse.RpcResponseData)
 
 	if err != nil {
-		log.Error("marshal RpcResponseData failed", log.String("serviceMethod", serviceMethod), log.ErrorField("error", err))
+		log.Errorf("marshal RpcResponseData failed,serviceMethod:[%s],error:%s", serviceMethod, err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (ns *NatsServer) WriteResponse(processor IRpcProcessor, nodeId string, serv
 	if ns.compressBytesLen > 0 && len(bytes) >= ns.compressBytesLen {
 		compressBuff, err = compressor.CompressBlock(bytes)
 		if err != nil {
-			log.Error("CompressBlock failed", log.String("serviceMethod", serviceMethod), log.ErrorField("error", err))
+			log.Errorf("CompressBlock failed,serviceMethod:[%s],error:%s", serviceMethod, err)
 			return
 		}
 		if len(compressBuff) < len(bytes) {
@@ -106,7 +106,7 @@ func (ns *NatsServer) WriteResponse(processor IRpcProcessor, nodeId string, serv
 	}
 
 	if err != nil {
-		log.Error("WriteMsg error,Rpc return is fail", log.String("nodeId", nodeId), log.String("serviceMethod", serviceMethod), log.ErrorField("error", err))
+		log.Errorf("WriteMsg error,Rpc return is fail,nodeId:%s,serviceMethod:[%s],error:%s", nodeId, serviceMethod, err)
 	}
 }
 

@@ -47,7 +47,7 @@ func (slf *HttpServer) startListen() error {
 	for _, caFile := range slf.caFileList {
 		cer, err := tls.LoadX509KeyPair(caFile.CertFile, caFile.Keyfile)
 		if err != nil {
-			log.Fatal("Load CA file is fail", log.String("error", err.Error()), log.String("certFile", caFile.CertFile), log.String("keyFile", caFile.Keyfile))
+			log.Fatalf("Load CA file is fail,error:%s,certFile:%s,keyFile:%s", err.Error(), caFile.CertFile, caFile.Keyfile)
 			return err
 		}
 		tlsCaList = append(tlsCaList, cer)
@@ -74,7 +74,7 @@ func (slf *HttpServer) startListen() error {
 	}
 
 	if err != nil {
-		log.Fatal("Listen failure", log.String("error", err.Error()), log.String("addr:", slf.listenAddr))
+		log.Fatalf("Listen failure,error:%s,addr:%s", err.Error(), slf.listenAddr)
 		return err
 	}
 

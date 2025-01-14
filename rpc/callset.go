@@ -55,14 +55,14 @@ func (cs *CallSet) checkRpcCallTimeout() {
 			pCall := cs.pending[callSeq]
 			if pCall == nil {
 				cs.pendingLock.Unlock()
-				log.Error("call seq is not find", log.Uint64("seq", callSeq))
+				log.Errorf("call seq is not find,seq:%d", callSeq)
 				continue
 			}
 
 			delete(cs.pending, callSeq)
 			strTimeout := strconv.FormatInt(int64(pCall.TimeOut.Seconds()), 10)
 			pCall.Err = errors.New("RPC call takes more than " + strTimeout + " seconds,method is " + pCall.ServiceMethod)
-			log.Error("call timeout", log.String("error", pCall.Err.Error()))
+			log.Error("call timeout,error:", pCall.Err.Error())
 			cs.makeCallFail(pCall)
 			cs.pendingLock.Unlock()
 			continue
@@ -75,7 +75,7 @@ func (cs *CallSet) AddPending(call *Call) {
 
 	if call.Seq == 0 {
 		cs.pendingLock.Unlock()
-		log.StackError("call is error.")
+		log.Fatal("call is error.")
 		return
 	}
 
@@ -127,7 +127,7 @@ func (cs *CallSet) cleanPending() {
 		}
 		pCall := cs.pending[callSeq]
 		if pCall == nil {
-			log.Error("call Seq is not find", log.Uint64("seq", callSeq))
+			log.Errorf("call Seq is not find,seq:%d", callSeq)
 			continue
 		}
 

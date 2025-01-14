@@ -130,7 +130,7 @@ func (agent *RpcAgent) WriteResponse(processor IRpcProcessor, connTag string, se
 	defer processor.ReleaseRpcResponse(rpcResponse.RpcResponseData)
 
 	if errM != nil {
-		log.Error("marshal RpcResponseData failed", log.String("serviceMethod", serviceMethod), log.ErrorField("error", errM))
+		log.Errorf("marshal RpcResponseData failed,serviceMethod:[%s],error:%s", serviceMethod, errM)
 		return
 	}
 
@@ -141,7 +141,7 @@ func (agent *RpcAgent) WriteResponse(processor IRpcProcessor, connTag string, se
 
 		compressBuff, cErr = compressor.CompressBlock(bytes)
 		if cErr != nil {
-			log.Error("CompressBlock failed", log.String("serviceMethod", serviceMethod), log.ErrorField("error", cErr))
+			log.Errorf("CompressBlock failed,serviceMethod[%s],error:%s", serviceMethod, cErr)
 			return
 		}
 		if len(compressBuff) < len(bytes) {
@@ -155,14 +155,14 @@ func (agent *RpcAgent) WriteResponse(processor IRpcProcessor, connTag string, se
 		compressor.CompressBufferCollection(compressBuff)
 	}
 	if errM != nil {
-		log.Error("WriteMsg error,Rpc return is fail", log.String("serviceMethod", serviceMethod), log.ErrorField("error", errM))
+		log.Errorf("WriteMsg error,Rpc return is fail,serviceMethod[%s],error:%s", serviceMethod, errM)
 	}
 }
 
 func (agent *RpcAgent) Run() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(fmt.Sprint(r))
 		}
 	}()
 
@@ -170,7 +170,7 @@ func (agent *RpcAgent) Run() {
 		data, err := agent.conn.ReadMsg()
 		if err != nil {
 			//will close conn
-			log.Error("read message is error", log.String("remoteAddress", agent.conn.RemoteAddr().String()), log.ErrorField("error", err))
+			log.Errorf("read message is error,remoteAddress[%s],error:%s", agent.conn.RemoteAddr().String(), err)
 			break
 		}
 
@@ -178,7 +178,7 @@ func (agent *RpcAgent) Run() {
 		if err != nil {
 			//will close conn
 			agent.conn.ReleaseReadMsg(data)
-			log.Error("processRpcRequest is error", log.String("remoteAddress", agent.conn.RemoteAddr().String()), log.ErrorField("error", err))
+			log.Errorf("processRpcRequest is error,remoteAddress[%s],error:%s", agent.conn.RemoteAddr().String(), err)
 
 			break
 		}

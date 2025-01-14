@@ -56,20 +56,20 @@ func (cs *CustomerSubscriber) trySetSubscriberBaseInfo(rpcHandler rpc.IRpcHandle
 	strRpcMethod := strings.Split(callBackRpcMethod, ".")
 	if len(strRpcMethod) != 2 {
 		err := errors.New("RpcMethod " + callBackRpcMethod + " is error")
-		log.SError(err.Error())
+		log.Error(err.Error())
 		return err
 	}
 	cs.serviceName = strRpcMethod[0]
 
 	if cluster.HasService(fromNodeId, cs.serviceName) == false {
 		err := fmt.Errorf("nodeId %s cannot found %s", fromNodeId, cs.serviceName)
-		log.SError(err.Error())
+		log.Error(err.Error())
 		return err
 	}
 
 	if cluster.GetCluster().IsNodeConnected(fromNodeId) == false {
 		err := fmt.Errorf("nodeId %s is disconnect", fromNodeId)
-		log.SError(err.Error())
+		log.Error(err.Error())
 		return err
 	}
 

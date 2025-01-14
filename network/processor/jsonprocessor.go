@@ -110,7 +110,7 @@ func (jsonProcessor *JsonProcessor) MakeRawMsg(msgType uint16, msg []byte) *Json
 func (jsonProcessor *JsonProcessor) UnknownMsgRoute(clientId string, msg interface{}, recyclerReaderBytes func(data []byte)) {
 	defer recyclerReaderBytes(msg.([]byte))
 	if jsonProcessor.unknownMessageHandler == nil {
-		log.Debug("Unknown message", log.String("clientId", clientId))
+		log.Debug("Unknown message,clientId:%s", clientId)
 		return
 	}
 

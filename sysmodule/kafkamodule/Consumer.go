@@ -93,13 +93,13 @@ func (c *ConsumerGroup) Setup(addr []string, topics []string, groupId string, co
 		for {
 			if err = c.Consume(ctx, topics, &handler); err != nil {
 				// 当setup失败的时候，error会返回到这里
-				log.Error("Error from consumer", log.Any("err", err))
+				log.Errorf("Error from consumer,err:%s", err)
 				return
 			}
 
 			// check if context was cancelled, signaling that the consumer should stop
 			if ctx.Err() != nil {
-				log.Info("consumer stop", log.Any("info", ctx.Err()))
+				log.Debugf("consumer stop,info:%s", ctx.Err())
 			}
 
 			c.chanExit <- err
@@ -119,7 +119,7 @@ func (c *ConsumerGroup) Close() {
 	//2.关闭连接
 	err := c.ConsumerGroup.Close()
 	if err != nil {
-		log.Error("close consumerGroup fail", log.Any("err", err.Error()))
+		log.Errorf("close consumerGroup fail:%s", err.Error())
 	}
 
 	//3.等待退出
@@ -248,7 +248,7 @@ func (ch *ConsumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession
 		select {
 		case msg := <-claim.Messages():
 			if msg == nil {
-				log.SWarning("claim will exit", log.Any("topic", claim.Topic()), log.Any("Partition", claim.Partition()))
+				log.Warnf("claim will exit:%s,Partition:%s", claim.Topic(), claim.Partition())
 				return nil
 			}
 			ch.AppendMsg(session, msg)

@@ -66,7 +66,7 @@ func (m *RedisModule) Init(redisCfg *ConfigRedis) {
 			}
 			c, err := redis.Dial("tcp", redisServer, opt...)
 			if err != nil {
-				log.Error("Connect redis fail", log.ErrorField("err",err))
+				log.Errorf("Connect redis fail,err:%s", err)
 				return nil, err
 			}
 
@@ -79,7 +79,7 @@ func (m *RedisModule) Init(redisCfg *ConfigRedis) {
 			}
 			_, err := c.Do("PING")
 			if err != nil {
-				log.Error("Do PING fail reason", log.ErrorField("err",err))
+				log.Errorf("Do PING fail reason,err:%s", err)
 				return err
 			}
 			return err
@@ -101,7 +101,7 @@ func (m *RedisModule) getConn() (redis.Conn, error) {
 	if conn.Err() != nil {
 		err := conn.Err()
 		if err != nil {
-			log.Error("get Conn have error", log.ErrorField("err",err))
+			log.Errorf("get Conn have error,err:%s", err)
 		}
 		conn.Close()
 		return nil, err
@@ -118,7 +118,7 @@ func (m *RedisModule) TestPingRedis() error {
 
 	err = m.redisPool.TestOnBorrow(conn, time.Now())
 	if err != nil {
-		log.Error("TestOnBorrow fail", log.ErrorField("err",err))
+		log.Errorf("TestOnBorrow fail,err:%s", err)
 		return err
 	}
 
@@ -171,7 +171,7 @@ func (m *RedisModule) setStringByExpire(key, value, expire interface{}) error {
 	}
 
 	if retErr != nil {
-		log.Error("setStringByExpire fail", log.ErrorField("err",retErr))
+		log.Error("setStringByExpire fail,err:%s", retErr)
 		return retErr
 	}
 
@@ -254,7 +254,7 @@ func (m *RedisModule) setMuchStringByExpire(mapInfo map[interface{}]interface{},
 	}
 
 	if serr != nil {
-		log.Error("setMuchStringByExpire fail",log.ErrorField("err",serr))
+		log.Errorf("setMuchStringByExpire fail,err:%s", serr)
 		conn.Do("DISCARD")
 		return serr
 	} else {
@@ -262,7 +262,7 @@ func (m *RedisModule) setMuchStringByExpire(mapInfo map[interface{}]interface{},
 	}
 
 	if err != nil {
-		log.Error("setMuchStringByExpire fail", log.ErrorField("err",err))
+		log.Errorf("setMuchStringByExpire fail,err:%s", err)
 	}
 
 	return err
@@ -277,7 +277,7 @@ func (m *RedisModule) GetString(key interface{}) (string, error) {
 
 	ret, err := conn.Do("GET", key)
 	if err != nil {
-		log.Error("GetString fail", log.ErrorField("err",err))
+		log.Errorf("GetString fail,err:%s", err)
 		return "", err
 	}
 
@@ -298,7 +298,7 @@ func (m *RedisModule) GetStringJSON(key string, st interface{}) error {
 
 	ret, err := conn.Do("GET", key)
 	if err != nil {
-		log.Error("GetStringJSON fail", log.ErrorField("err",err))
+		log.Errorf("GetStringJSON fail,err:%s", err)
 		return err
 	}
 

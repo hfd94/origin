@@ -1,6 +1,11 @@
 package cluster
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"fmt"
 	"github.com/duanhf2012/origin/v2/event"
 	"github.com/duanhf2012/origin/v2/log"
 	"github.com/duanhf2012/origin/v2/rpc"
@@ -9,16 +14,11 @@ import (
 	"go.etcd.io/etcd/api/v3/mvccpb"
 	"go.etcd.io/etcd/client/v3"
 	"google.golang.org/protobuf/proto"
-	"time"
-	"context"
-	"errors"
-	"fmt"
+	"io/ioutil"
 	"path"
 	"strings"
 	"sync/atomic"
-	"io/ioutil"
-	"crypto/x509"
-	"crypto/tls"
+	"time"
 )
 
 const originDir = "/origin"
@@ -42,7 +42,8 @@ type EtcdDiscoveryService struct {
 	mapDiscoveryNodeId map[string]map[string]struct{} //map[networkName]map[nodeId]
 }
 
-var  etcdDiscovery *EtcdDiscoveryService
+var etcdDiscovery *EtcdDiscoveryService
+
 func getEtcdDiscovery() IServiceDiscovery {
 	if etcdDiscovery == nil {
 		etcdDiscovery = &EtcdDiscoveryService{}
@@ -50,7 +51,6 @@ func getEtcdDiscovery() IServiceDiscovery {
 
 	return etcdDiscovery
 }
-
 
 func (ed *EtcdDiscoveryService) InitDiscovery(localNodeId string, funDelNode FunDelNode, funSetNode FunSetNode) error {
 	ed.localNodeId = localNodeId
@@ -101,14 +101,14 @@ func (ed *EtcdDiscoveryService) OnInit() error {
 			// load cert
 			cert, cerr := tls.LoadX509KeyPair(etcdDiscoveryCfg.EtcdList[i].Cert, etcdDiscoveryCfg.EtcdList[i].CertKey)
 			if cerr != nil {
-				log.Error("load cert error", log.ErrorField("err", cerr))
+				log.Errorf("load cert error:%s", cerr)
 				return cerr
 			}
 
 			// load root ca
 			caData, cerr := ioutil.ReadFile(etcdDiscoveryCfg.EtcdList[i].Ca)
 			if cerr != nil {
-				log.Error("load root ca error", log.ErrorField("err", cerr))
+				log.Errorf("load root ca error:%s", cerr)
 				return cerr
 			}
 			pool := x509.NewCertPool()
@@ -122,22 +122,21 @@ func (ed *EtcdDiscoveryService) OnInit() error {
 		client, err = clientv3.New(clientv3.Config{
 			Endpoints:   etcdDiscoveryCfg.EtcdList[i].Endpoints,
 			DialTimeout: etcdDiscoveryCfg.DialTimeoutMillisecond,
-			Username: etcdDiscoveryCfg.EtcdList[i].UserName,
-			Password: etcdDiscoveryCfg.EtcdList[i].Password,
-			Logger:      log.GetLogger().Logger,
+			Username:    etcdDiscoveryCfg.EtcdList[i].UserName,
+			Password:    etcdDiscoveryCfg.EtcdList[i].Password,
+			//Logger:      log.GetLogger(),
 			TLS: tlsConfig,
 		})
 
-
 		if err != nil {
-			log.Error("etcd discovery init fail", log.ErrorField("err", err))
+			log.Errorf("etcd discovery init fail:%s", err)
 			return err
 		}
 
 		ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 		_, err = client.Leases(ctx)
 		if err != nil {
-			log.Error("etcd discovery init fail", log.Any("endpoint", etcdDiscoveryCfg.EtcdList[i].Endpoints), log.ErrorField("err", err))
+			log.Errorf("etcd discovery init fail,endpoint:%s,err:%s", etcdDiscoveryCfg.EtcdList[i].Endpoints, err)
 			return err
 		}
 
@@ -162,7 +161,7 @@ func (ed *EtcdDiscoveryService) registerServiceByClient(client *clientv3.Client,
 	var resp *clientv3.LeaseGrantResponse
 	resp, err = client.Grant(context.Background(), cluster.GetEtcdDiscovery().TTLSecond)
 	if err != nil {
-		log.Error("etcd registerService fail", log.ErrorField("err", err))
+		log.Errorf("etcd registerService fail:%s", err)
 		ed.tryRegisterService(client, etcdClient)
 		return
 	}
@@ -172,7 +171,7 @@ func (ed *EtcdDiscoveryService) registerServiceByClient(client *clientv3.Client,
 		// 注册服务节点到 etcd
 		_, err = client.Put(context.Background(), ed.getRegisterKey(watchKey), ed.byteLocalNodeInfo, clientv3.WithLease(resp.ID))
 		if err != nil {
-			log.Error("etcd Put fail", log.ErrorField("err", err))
+			log.Errorf("etcd Put fail:%s", err)
 			ed.tryRegisterService(client, etcdClient)
 			return
 		}
@@ -180,7 +179,7 @@ func (ed *EtcdDiscoveryService) registerServiceByClient(client *clientv3.Client,
 
 	etcdClient.keepAliveChan, err = client.KeepAlive(context.Background(), etcdClient.leaseID)
 	if err != nil {
-		log.Error("etcd KeepAlive fail", log.ErrorField("err", err))
+		log.Errorf("etcd KeepAlive fail:%s", err)
 		ed.tryRegisterService(client, etcdClient)
 		return
 	}
@@ -191,7 +190,7 @@ func (ed *EtcdDiscoveryService) registerServiceByClient(client *clientv3.Client,
 			case _, ok := <-etcdClient.keepAliveChan:
 				//log.Debug("ok",log.Any("addr",client.Endpoints()))
 				if !ok {
-					log.Error("etcd keepAliveChan fail", log.Any("watchKeys", etcdClient.watchKeys))
+					log.Errorf("etcd keepAliveChan fail,watchKeys:%s", etcdClient.watchKeys)
 					ed.tryRegisterService(client, etcdClient)
 					return
 				}
@@ -234,7 +233,7 @@ func (ed *EtcdDiscoveryService) retire() error {
 			// 注册服务节点到 etcd
 			_, err := c.Put(context.Background(), ed.getRegisterKey(watchKey), ed.byteLocalNodeInfo, clientv3.WithLease(ec.leaseID))
 			if err != nil {
-				log.Error("etcd Put fail", log.ErrorField("err", err))
+				log.Errorf("etcd Put fail:%s", err)
 				return err
 			}
 		}
@@ -319,12 +318,12 @@ func (ed *EtcdDiscoveryService) setNodeInfo(networkName string, nodeInfo *rpc.No
 func (ed *EtcdDiscoveryService) close() {
 	for c, ec := range ed.mapClient {
 		if _, err := c.Revoke(context.Background(), ec.leaseID); err != nil {
-			log.Error("etcd Revoke fail", log.ErrorField("err", err))
+			log.Errorf("etcd Revoke fail:%s", err)
 		}
 		c.Watcher.Close()
 		err := c.Close()
 		if err != nil {
-			log.Error("etcd Close fail", log.ErrorField("err", err))
+			log.Errorf("etcd Close fail:%s", err)
 		}
 	}
 }
@@ -333,7 +332,7 @@ func (ed *EtcdDiscoveryService) getServices(client *clientv3.Client, etcdClient 
 	// 根据前缀获取现有的key
 	resp, err := client.Get(context.Background(), watchKey, clientv3.WithPrefix())
 	if err != nil {
-		log.Error("etcd Get fail", log.ErrorField("err", err))
+		log.Errorf("etcd Get fail:%s", err)
 		ed.tryWatch(client, etcdClient)
 		return false
 	}
@@ -356,7 +355,7 @@ func (ed *EtcdDiscoveryService) watchByClient(client *clientv3.Client, etcdClien
 func (ed *EtcdDiscoveryService) watcher(client *clientv3.Client, etcdClient *etcdClientInfo, watchKey string) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(r)
 			ed.tryWatch(client, etcdClient)
 		}
 	}()
@@ -385,7 +384,7 @@ func (ed *EtcdDiscoveryService) setNode(netWorkName string, byteNode []byte) str
 	var nodeInfo rpc.NodeInfo
 	err := proto.Unmarshal(byteNode, &nodeInfo)
 	if err != nil {
-		log.Error("Unmarshal fail", log.String("netWorkName", netWorkName), log.ErrorField("err", err))
+		log.Errorf("Unmarshal fail,netWorkName:%s,err:%s", netWorkName, err)
 		return ""
 	}
 
@@ -513,7 +512,7 @@ func (ed *EtcdDiscoveryService) RPC_ServiceRecord(etcdServiceRecord *service.Etc
 	}
 
 	if client == nil {
-		log.Error("etcd record fail,cannot find network name", log.String("networkName", etcdServiceRecord.NetworkName))
+		log.Errorf("etcd record fail,cannot find network name:[%s]", etcdServiceRecord.NetworkName)
 		return errors.New("annot find network name")
 	}
 
@@ -524,7 +523,7 @@ func (ed *EtcdDiscoveryService) RPC_ServiceRecord(etcdServiceRecord *service.Etc
 		ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 		lg, err = client.Grant(ctx, etcdServiceRecord.TTLSecond)
 		if err != nil {
-			log.Error("etcd record fail,cannot grant lease", log.ErrorField("err", err))
+			log.Errorf("etcd record fail,cannot grant lease error:%s", err)
 			return errors.New("cannot grant lease")
 		}
 	}
@@ -533,14 +532,14 @@ func (ed *EtcdDiscoveryService) RPC_ServiceRecord(etcdServiceRecord *service.Etc
 		ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
 		_, err = client.Put(ctx, path.Join(originDir, etcdServiceRecord.RecordKey), etcdServiceRecord.RecordInfo, clientv3.WithLease(lg.ID))
 		if err != nil {
-			log.Error("etcd record fail,cannot put record", log.ErrorField("err", err))
+			log.Errorf("etcd record fail,cannot put record,error:%s", err)
 		}
 		return errors.New("cannot put record")
 	}
 
 	_, err = client.Put(context.Background(), path.Join(originDir, etcdServiceRecord.RecordKey), etcdServiceRecord.RecordInfo)
 	if err != nil {
-		log.Error("etcd record fail,cannot put record", log.ErrorField("err", err))
+		log.Errorf("etcd record fail,cannot put record,error:%s", err)
 		return errors.New("cannot put record")
 	}
 

@@ -5,32 +5,33 @@ import (
 	"os"
 )
 
-//本地所有的service
+// 本地所有的service
 var mapServiceName map[string]IService
 var setupServiceList []IService
 
 type RegRpcEventFunType func(serviceName string)
 type RegDiscoveryServiceEventFunType func(serviceName string)
+
 var RegRpcEventFun RegRpcEventFunType
 var UnRegRpcEventFun RegRpcEventFunType
 
-func init(){
+func init() {
 	mapServiceName = map[string]IService{}
 	setupServiceList = []IService{}
 }
 
 func Init() {
-	for _,s := range setupServiceList {
+	for _, s := range setupServiceList {
 		err := s.OnInit()
 		if err != nil {
-			log.Error("Failed to initialize "+s.GetName()+" service",log.ErrorField("err",err))
+			log.Errorf("Failed to initialize %s service,error:%s", s.GetName(), err)
 			os.Exit(1)
 		}
 	}
 }
 
 func Setup(s IService) bool {
-	_,ok := mapServiceName[s.GetName()]
+	_, ok := mapServiceName[s.GetName()]
 	if ok == true {
 		return false
 	}
@@ -41,7 +42,7 @@ func Setup(s IService) bool {
 }
 
 func GetService(serviceName string) IService {
-	s,ok := mapServiceName[serviceName]
+	s, ok := mapServiceName[serviceName]
 	if ok == false {
 		return nil
 	}
@@ -49,19 +50,19 @@ func GetService(serviceName string) IService {
 	return s
 }
 
-func Start(){
-	for _,s := range setupServiceList {
+func Start() {
+	for _, s := range setupServiceList {
 		s.Start()
 	}
 }
 
-func StopAllService(){
+func StopAllService() {
 	for i := len(setupServiceList) - 1; i >= 0; i-- {
 		setupServiceList[i].Stop()
 	}
 }
 
-func NotifyAllServiceRetire(){
+func NotifyAllServiceRetire() {
 	for i := len(setupServiceList) - 1; i >= 0; i-- {
 		setupServiceList[i].SetRetire()
 	}

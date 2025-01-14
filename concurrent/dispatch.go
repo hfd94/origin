@@ -7,7 +7,6 @@ import (
 
 	"fmt"
 
-
 	"context"
 	"github.com/duanhf2012/origin/v2/log"
 	"github.com/duanhf2012/origin/v2/util/queue"
@@ -192,7 +191,7 @@ breakFor:
 func (d *dispatch) DoCallback(cb func(err error)) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(fmt.Sprint(r))
 		}
 	}()
 

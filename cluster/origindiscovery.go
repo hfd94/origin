@@ -125,7 +125,7 @@ func (ds *OriginDiscoveryMaster) checkTTL() {
 	ds.NewTicker(interval, func(t *timer.Ticker) {
 		ds.nsTTL.checkTTL(func(nodeIdList []string) {
 			for _, nodeId := range nodeIdList {
-				log.Info("TTL expiry", log.String("nodeId", nodeId))
+				log.Debugf("TTL expiry,nodeId:%s", nodeId)
 				ds.OnNodeDisconnect(nodeId)
 			}
 		})
@@ -208,7 +208,7 @@ func (ds *OriginDiscoveryMaster) RPC_Ping(req *rpc.Ping, res *rpc.Pong) error {
 }
 
 func (ds *OriginDiscoveryMaster) RPC_NodeRetire(req *rpc.NodeRetireReq, _ *rpc.Empty) error {
-	log.Info("node is retire", log.String("nodeId", req.NodeInfo.NodeId), log.Bool("retire", req.NodeInfo.Retire))
+	log.Debugf("node is retire,NodeId:%s,retire:%t", req.NodeInfo.NodeId, req.NodeInfo.Retire)
 
 	ds.updateNodeInfo(req.NodeInfo)
 
@@ -265,7 +265,7 @@ func (ds *OriginDiscoveryMaster) RPC_RegServiceDiscover(req *rpc.RegServiceDisco
 }
 
 func (ds *OriginDiscoveryMaster) RPC_UnRegServiceDiscover(req *rpc.UnRegServiceDiscoverReq, _ *rpc.Empty) error {
-	log.Debug("RPC_UnRegServiceDiscover", log.String("nodeId", req.NodeId))
+	log.Debugf("RPC_UnRegServiceDiscover,nodeId:%s", req.NodeId)
 	ds.OnNodeDisconnect(req.NodeId)
 	return nil
 }
@@ -471,7 +471,7 @@ func (dc *OriginDiscoveryClient) OnRelease() {
 
 		err := dc.CallNodeWithTimeout(3*time.Second, masterNodeList.MasterNodeList[i].NodeId, UnRegServiceDiscover, &nodeRetireReq, &rpc.Empty{})
 		if err != nil {
-			log.Error("call "+UnRegServiceDiscover+" is fail", log.ErrorField("err", err))
+			log.Errorf("call "+UnRegServiceDiscover+" is fail,error:%s", err)
 		}
 	}
 }
@@ -493,7 +493,7 @@ func (dc *OriginDiscoveryClient) OnRetire() {
 
 		err := dc.GoNode(masterNodeList.MasterNodeList[i].NodeId, NodeRetireRpcMethod, &nodeRetireReq)
 		if err != nil {
-			log.Error("call "+NodeRetireRpcMethod+" is fail", log.ErrorField("err", err))
+			log.Errorf("call "+NodeRetireRpcMethod+" is fail:%s", err)
 		}
 	}
 }
@@ -521,7 +521,7 @@ func (dc *OriginDiscoveryClient) regServiceDiscover(nodeId string) {
 	req.NodeInfo.PublicServiceList = cluster.localNodeInfo.PublicServiceList
 	req.NodeInfo.Retire = dc.bRetire
 	req.NodeInfo.Private = cluster.localNodeInfo.Private
-	log.Debug("regServiceDiscover", log.String("nodeId", nodeId))
+	log.Debug("regServiceDiscover,nodeId:%s", nodeId)
 	//向Master服务同步本Node服务信息
 	_, err := dc.AsyncCallNodeWithTimeout(3*time.Second, nodeId, RegServiceDiscover, &req, func(res *rpc.SubscribeDiscoverNotify, err error) {
 		if err != nil {

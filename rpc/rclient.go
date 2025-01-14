@@ -49,7 +49,7 @@ func (rc *RClient) Go(nodeId string, timeout time.Duration, rpcHandler IRpcHandl
 	_, processor := GetProcessorType(args)
 	InParam, err := processor.Marshal(args)
 	if err != nil {
-		log.Error("Marshal is fail", log.ErrorField("error", err))
+		log.Errorf("Marshal is fail:%s", err)
 		call := MakeCall()
 		call.DoError(err)
 		return call
@@ -74,7 +74,7 @@ func (rc *RClient) AsyncCall(nodeId string, timeout time.Duration, rpcHandler IR
 func (rc *RClient) Run() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(fmt.Sprint(r))
 		}
 	}()
 
@@ -86,7 +86,7 @@ func (rc *RClient) Run() {
 	for {
 		bytes, err := rc.conn.ReadMsg()
 		if err != nil {
-			log.Error("RClient read msg is failed", log.ErrorField("error", err))
+			log.Errorf("RClient read msg is failed:%s", err)
 			return
 		}
 

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-
 	"github.com/duanhf2012/origin/v2/log"
 )
 
@@ -57,7 +56,7 @@ func (w *worker) exec(t *task) {
 			t.cb = func(err error) {
 				cb(errors.New(errString))
 			}
-			log.StackError(errString)
+			log.Error(errString)
 			w.endCallFun(true, t)
 		}
 	}()

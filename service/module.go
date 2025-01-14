@@ -43,10 +43,10 @@ type IModuleTimer interface {
 
 type Module struct {
 	rpcHandle.IRpcHandler
-	moduleId         uint32             //模块Id
-	moduleName       string             //模块名称
-	parent           IModule            //父亲
-	self             IModule            //自己
+	moduleId         uint32    //模块Id
+	moduleName       string    //模块名称
+	parent           IModule   //父亲
+	self             IModule   //自己
 	child            []IModule //孩子们
 	mapActiveTimer   map[timer.ITimer]struct{}
 	mapActiveIdTimer map[uint64]timer.ITimer
@@ -94,7 +94,7 @@ func (m *Module) AddModule(module IModule) (uint32, error) {
 		pAddModule.moduleId = m.NewModuleId()
 	}
 
-	_,ok := m.ancestor.getBaseModule().(*Module).descendants[module.GetModuleId()]
+	_, ok := m.ancestor.getBaseModule().(*Module).descendants[module.GetModuleId()]
 	if ok == true {
 		return 0, fmt.Errorf("exists module id %d", module.GetModuleId())
 	}
@@ -108,14 +108,14 @@ func (m *Module) AddModule(module IModule) (uint32, error) {
 	pAddModule.eventHandler.Init(m.eventHandler.GetEventProcessor())
 	pAddModule.IConcurrent = m.IConcurrent
 
-	m.child = append(m.child,module)
+	m.child = append(m.child, module)
 	m.ancestor.getBaseModule().(*Module).descendants[module.GetModuleId()] = module
 
 	err := module.OnInit()
 	if err != nil {
 		delete(m.ancestor.getBaseModule().(*Module).descendants, module.GetModuleId())
 		m.child = m.child[:len(m.child)-1]
-		log.Error("module OnInit error",log.String("ModuleName",module.GetModuleName()),log.ErrorField("err",err))
+		log.Errorf("module OnInit error,ModuleName:[%s] %s", module.GetModuleName(), err)
 		return 0, err
 	}
 
@@ -128,7 +128,7 @@ func (m *Module) ReleaseModule(moduleId uint32) {
 	pModule.self.OnRelease()
 	log.Debug("Release module " + pModule.GetModuleName())
 
-	for i:=len(pModule.child)-1; i>=0; i-- {
+	for i := len(pModule.child) - 1; i >= 0; i-- {
 		m.ReleaseModule(pModule.child[i].GetModuleId())
 	}
 
@@ -297,7 +297,7 @@ func (m *Module) CancelTimerId(timerId *uint64) bool {
 
 	t, ok := m.mapActiveIdTimer[*timerId]
 	if ok == false {
-		log.StackError("cannot find timer id ", log.Uint64("timerId", *timerId))
+		log.Errorf("cannot find timer id,timerId:%d", *timerId)
 		return false
 	}
 

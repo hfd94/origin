@@ -26,7 +26,7 @@ func (server *BaseServer) myselfRpcHandlerGo(client *Client, handlerName string,
 	rpcHandler := server.rpcHandleFinder.FindRpcHandler(handlerName)
 	if rpcHandler == nil {
 		err := errors.New("service method " + serviceMethod + " not config!")
-		log.Error("service method not config", log.String("serviceMethod", serviceMethod))
+		log.Errorf("service method not config,serviceMethod:%s", serviceMethod)
 		return err
 	}
 
@@ -42,7 +42,7 @@ func (server *BaseServer) selfNodeRpcHandlerGo(timeout time.Duration, processor 
 	rpcHandler := server.rpcHandleFinder.FindRpcHandler(handlerName)
 	if rpcHandler == nil {
 		err := errors.New("service method " + serviceMethod + " not config!")
-		log.Error("service method not config", log.String("serviceMethod", serviceMethod), log.ErrorField("error", err))
+		log.Errorf("service method not config,serviceMethod:[%s],error:%s", serviceMethod, err)
 		pCall.Seq = 0
 		pCall.DoError(err)
 
@@ -59,7 +59,7 @@ func (server *BaseServer) selfNodeRpcHandlerGo(timeout time.Duration, processor 
 		iParam, err = processor.Clone(args)
 		if err != nil {
 			sErr := errors.New("RpcHandler " + handlerName + "." + serviceMethod + " deep copy inParam is error:" + err.Error())
-			log.Error("deep copy inParam is failed", log.String("handlerName", handlerName), log.String("serviceMethod", serviceMethod))
+			log.Errorf("deep copy inParam is failed,handlerName:%s,serviceMethod:[%s]", handlerName, serviceMethod)
 			pCall.Seq = 0
 			pCall.DoError(sErr)
 
@@ -74,7 +74,7 @@ func (server *BaseServer) selfNodeRpcHandlerGo(timeout time.Duration, processor 
 		var err error
 		req.inParam, err = rpcHandler.UnmarshalInParam(processor, serviceMethod, rpcMethodId, rawArgs)
 		if err != nil {
-			log.Error("unmarshalInParam is failed", log.String("serviceMethod", serviceMethod), log.Uint32("rpcMethodId", rpcMethodId), log.ErrorField("error", err))
+			log.Errorf("unmarshalInParam is failed,serviceMethod:[%s],rpcMethodId:%d,error:%s", serviceMethod, rpcMethodId, err)
 			pCall.Seq = 0
 			pCall.DoError(err)
 			ReleaseRpcRequest(req)
@@ -90,12 +90,12 @@ func (server *BaseServer) selfNodeRpcHandlerGo(timeout time.Duration, processor 
 				byteReturns, err := req.rpcProcessor.Marshal(Returns)
 				if err != nil {
 					Err = ConvertError(err)
-					log.Error("returns data cannot be marshal", log.Uint64("seq", callSeq), log.ErrorField("error", err))
+					log.Errorf("returns data cannot be marshal,seq:%d,error:%s", callSeq, err)
 				} else {
 					err = req.rpcProcessor.Unmarshal(byteReturns, reply)
 					if err != nil {
 						Err = ConvertError(err)
-						log.Error("returns data cannot be Unmarshal", log.Uint64("seq", callSeq), log.ErrorField("error", err))
+						log.Errorf("returns data cannot be Unmarshal,seq:%d,error:%s", callSeq, err)
 					}
 				}
 			}
@@ -103,7 +103,7 @@ func (server *BaseServer) selfNodeRpcHandlerGo(timeout time.Duration, processor 
 			ReleaseRpcRequest(req)
 			v := client.RemovePending(callSeq)
 			if v == nil {
-				log.Error("rpcClient cannot find seq", log.Uint64("seq", callSeq))
+				log.Errorf("rpcClient cannot find seq:%d", callSeq)
 				return
 			}
 
@@ -251,7 +251,7 @@ func (server *BaseServer) processRpcRequest(data []byte, connTag string, wrRespo
 		if req.RpcRequestData.IsNoReply() == false {
 			wrResponse(processor, connTag, req.RpcRequestData.GetServiceMethod(), req.RpcRequestData.GetSeq(), nil, rpcError)
 		}
-		log.Error("serviceMethod not config", log.String("serviceMethod", req.RpcRequestData.GetServiceMethod()))
+		log.Errorf("serviceMethod not config,serviceMethod:[%s]", req.RpcRequestData.GetServiceMethod())
 		ReleaseRpcRequest(req)
 		return nil
 	}
@@ -266,7 +266,7 @@ func (server *BaseServer) processRpcRequest(data []byte, connTag string, wrRespo
 	req.inParam, err = rpcHandler.UnmarshalInParam(req.rpcProcessor, req.RpcRequestData.GetServiceMethod(), req.RpcRequestData.GetRpcMethodId(), req.RpcRequestData.GetInParam())
 	if err != nil {
 		rErr := "Call Rpc " + req.RpcRequestData.GetServiceMethod() + " Param error " + err.Error()
-		log.Error("call rpc param error", log.String("serviceMethod", req.RpcRequestData.GetServiceMethod()), log.ErrorField("error", err))
+		log.Errorf("call rpc param error,serviceMethod:[%s],error:%s", req.RpcRequestData.GetServiceMethod(), err)
 		if req.requestHandle != nil {
 			req.requestHandle(nil, RpcError(rErr))
 		} else {

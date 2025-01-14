@@ -1,7 +1,6 @@
 package node
 
 import (
-	"errors"
 	"fmt"
 	"github.com/duanhf2012/origin/v2/cluster"
 	"github.com/duanhf2012/origin/v2/console"
@@ -11,13 +10,11 @@ import (
 	"github.com/duanhf2012/origin/v2/util/buildtime"
 	"github.com/duanhf2012/origin/v2/util/sysprocess"
 	"github.com/duanhf2012/origin/v2/util/timer"
-	"go.uber.org/zap/zapcore"
 	"io"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -55,10 +52,10 @@ func init() {
 	console.RegisterCommandString("stop", "", "<-stop nodeid=nodeid> Stop originserver process.", stopNode)
 	console.RegisterCommandString("retire", "", "<-retire nodeid=nodeid> retire originserver process.", retireNode)
 	console.RegisterCommandString("config", "", "<-config path> Configuration file path.", setConfigPath)
-	console.RegisterCommandString("console", "", "<-console true|false> Turn on or off screen log output.", openConsole)
-	console.RegisterCommandString("loglevel", "debug", "<-loglevel debug|info|warn|error|stackerror|fatal> Set loglevel.", setLevel)
-	console.RegisterCommandString("logpath", "", "<-logpath path> Set log file path.", setLogPath)
-	console.RegisterCommandInt("logsize", 0, "<-logsize size> Set log size(MB).", setLogSize)
+	//console.RegisterCommandString("console", "", "<-console true|false> Turn on or off screen log output.", openConsole)
+	//console.RegisterCommandString("loglevel", "debug", "<-loglevel debug|info|warn|error|stackerror|fatal> Set loglevel.", setLevel)
+	//console.RegisterCommandString("logpath", "", "<-logpath path> Set log file path.", setLogPath)
+	//console.RegisterCommandInt("logsize", 0, "<-logsize size> Set log size(MB).", setLogSize)
 	console.RegisterCommandString("pprof", "", "<-pprof ip:port> Open performance analysis.", setPprof)
 }
 
@@ -157,15 +154,8 @@ func initNode(id string) {
 	nodeId = id
 	err := cluster.GetCluster().Init(GetNodeId(), Setup)
 	if err != nil {
-		log.Error("Init cluster fail", log.ErrorField("error", err))
+		fmt.Printf("Init cluster fail %s", err)
 		os.Exit(1)
-	}
-
-	err = initLog()
-	if err != nil {
-		log.Error("Init log fail", log.ErrorField("error", err))
-		os.Exit(1)
-		return
 	}
 
 	//2.顺序安装服务
@@ -192,7 +182,7 @@ func initNode(id string) {
 			}
 
 			if bSetup == false {
-				log.Error("Template service not found", log.String("service name", serviceName), log.String("template service name", templateServiceName))
+				fmt.Printf("Template service not found,service name:%s,template service name:%s", templateServiceName)
 				os.Exit(1)
 			}
 		}
@@ -216,24 +206,6 @@ func initNode(id string) {
 	//3.service初始化
 	log.Info("Start running server.")
 	service.Init()
-}
-
-func initLog() error {
-	logger := log.GetLogger()
-	if logger.LogPath == "" {
-		err := setLogPath("./log")
-		if err != nil {
-			return err
-		}
-	}
-
-	localNodeInfo := cluster.GetCluster().GetLocalNodeInfo()
-	fileName := fmt.Sprintf("%s.log", localNodeInfo.NodeId)
-	logger.FileName = fileName
-	logger.LogConfig.Filename = filepath.Join(logger.LogPath, logger.FileName)
-
-	logger.Init()
-	return nil
 }
 
 func Start() {
@@ -319,6 +291,11 @@ func startNode(args interface{}) error {
 		return fmt.Errorf("invalid option %s", param)
 	}
 
+	log.SetLogger(log.NewLogger(
+		log.WithNodeId(strNodeId),
+		log.WithStdout(true),
+	))
+
 	for {
 		processId, pErr := getRunProcessPid(strNodeId)
 		if pErr != nil {
@@ -329,13 +306,13 @@ func startNode(args interface{}) error {
 		myName, mErr := sysprocess.GetMyProcessName()
 		//当前进程名获取失败，不应该发生
 		if mErr != nil {
-			log.Error("get my process's name is error", log.ErrorField("err", mErr))
+			fmt.Printf("get my process's name is error:%s", mErr)
 			os.Exit(-1)
 		}
 
 		//进程id存在，而且进程名也相同，被认为是当前进程重复运行
 		if cErr == nil && name == myName {
-			log.Error("repeat runs are not allowed", log.String("nodeId", strNodeId), log.Int("processId", processId))
+			fmt.Printf("repeat runs are not allowed,nodeId:%s,processId:%d", strNodeId, processId)
 			os.Exit(-1)
 		}
 		break
@@ -345,8 +322,6 @@ func startNode(args interface{}) error {
 	writeProcessPid(strNodeId)
 	timer.StartTimer(10*time.Millisecond, 1000000)
 
-	//3.初始化node
-	defer log.GetLogger().Logger.Sync()
 	initNode(strNodeId)
 
 	//4.运行service
@@ -433,79 +408,79 @@ func OpenProfilerReport(interval time.Duration) {
 	profilerInterval = interval
 }
 
-func openConsole(args interface{}) error {
-	if args == "" {
-		return nil
-	}
-	strOpen := strings.ToLower(strings.TrimSpace(args.(string)))
-	if strOpen == "false" {
-		bOpenConsole := false
-		log.GetLogger().OpenConsole = &bOpenConsole
-	} else if strOpen == "true" {
-		bOpenConsole := true
-		log.GetLogger().OpenConsole = &bOpenConsole
-	} else {
-		return errors.New("parameter console error")
-	}
-	return nil
-}
-
-func setLevel(args interface{}) error {
-	if args == "" {
-		return nil
-	}
-
-	strlogLevel := strings.TrimSpace(args.(string))
-	switch strlogLevel {
-	case "debug":
-		log.GetLogger().LogLevel = zapcore.DebugLevel
-	case "info":
-		log.GetLogger().LogLevel = zapcore.InfoLevel
-	case "warn":
-		log.GetLogger().LogLevel = zapcore.WarnLevel
-	case "error":
-		log.GetLogger().LogLevel = zapcore.ErrorLevel
-	case "stackerror":
-		log.GetLogger().LogLevel = zapcore.ErrorLevel
-	case "fatal":
-		log.GetLogger().LogLevel = zapcore.FatalLevel
-	default:
-		return errors.New("unknown level: " + strlogLevel)
-	}
-	return nil
-}
-
-func setLogPath(args interface{}) error {
-	if args == "" {
-		return nil
-	}
-	logPath := strings.TrimSpace(args.(string))
-	dir, err := os.Stat(logPath)
-	if err == nil && dir.IsDir() == false {
-		return errors.New("Not found dir " + logPath)
-	}
-
-	if err != nil {
-		err = os.MkdirAll(logPath, os.ModePerm)
-		if err != nil {
-			return errors.New("Cannot create dir " + logPath)
-		}
-	}
-
-	log.GetLogger().LogPath = logPath
-	return nil
-}
-
-func setLogSize(args interface{}) error {
-	logSize, ok := args.(int)
-	if ok == false {
-		return errors.New("param logsize is error")
-	}
-	if logSize == 0 {
-		return nil
-	}
-
-	log.GetLogger().LogConfig.MaxSize = logSize
-
-	return nil
-}
+//func openConsole(args interface{}) error {
+//	if args == "" {
+//		return nil
+//	}
+//	strOpen := strings.ToLower(strings.TrimSpace(args.(string)))
+//	if strOpen == "false" {
+//		bOpenConsole := false
+//		log.GetLogger().OpenConsole = &bOpenConsole
+//	} else if strOpen == "true" {
+//		bOpenConsole := true
+//		log.GetLogger().OpenConsole = &bOpenConsole
+//	} else {
+//		return errors.New("parameter console error")
+//	}
+//	return nil
+//}
+//
+//func setLevel(args interface{}) error {
+//	if args == "" {
+//		return nil
+//	}
+//
+//	strlogLevel := strings.TrimSpace(args.(string))
+//	switch strlogLevel {
+//	case "debug":
+//		log.GetLogger().LogLevel = zapcore.DebugLevel
+//	case "info":
+//		log.GetLogger().LogLevel = zapcore.InfoLevel
+//	case "warn":
+//		log.GetLogger().LogLevel = zapcore.WarnLevel
+//	case "error":
+//		log.GetLogger().LogLevel = zapcore.ErrorLevel
+//	case "stackerror":
+//		log.GetLogger().LogLevel = zapcore.ErrorLevel
+//	case "fatal":
+//		log.GetLogger().LogLevel = zapcore.FatalLevel
+//	default:
+//		return errors.New("unknown level: " + strlogLevel)
+//	}
+//	return nil
+//}
+//
+//func setLogPath(args interface{}) error {
+//	if args == "" {
+//		return nil
+//	}
+//	logPath := strings.TrimSpace(args.(string))
+//	dir, err := os.Stat(logPath)
+//	if err == nil && dir.IsDir() == false {
+//		return errors.New("Not found dir " + logPath)
+//	}
+//
+//	if err != nil {
+//		err = os.MkdirAll(logPath, os.ModePerm)
+//		if err != nil {
+//			return errors.New("Cannot create dir " + logPath)
+//		}
+//	}
+//
+//	log.GetLogger().LogPath = logPath
+//	return nil
+//}
+//
+//func setLogSize(args interface{}) error {
+//	logSize, ok := args.(int)
+//	if ok == false {
+//		return errors.New("param logsize is error")
+//	}
+//	if logSize == 0 {
+//		return nil
+//	}
+//
+//	log.GetLogger().LogConfig.MaxSize = logSize
+//
+//	return nil
+//}

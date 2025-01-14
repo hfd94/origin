@@ -153,7 +153,7 @@ func DefaultReportFunction(name string, callNum int, costTime time.Duration, rec
 		average = costTime.Milliseconds() / int64(callNum)
 	}
 
-	log.Info("Profiler report tag "+name, log.Int("process count", callNum), log.Int64("take time", costTime.Milliseconds()), log.Int64("average", average))
+	log.Debugf("Profiler report tag,process count:%d,take time:%d,average:%d"+name, callNum, costTime.Milliseconds(), average)
 	elem := record.Front()
 	var strTypes string
 	for elem != nil {
@@ -164,7 +164,7 @@ func DefaultReportFunction(name string, callNum int, costTime time.Duration, rec
 			strTypes = "slow process"
 		}
 
-		log.Info("Profiler report type", log.String("Types", strTypes), log.String("RecordName", pRecord.RecordName), log.Int64("take time", pRecord.CostTime.Milliseconds()))
+		log.Info("Profiler report type:%s,RecordName:%s,take time:s", strTypes, pRecord.RecordName, pRecord.CostTime.Milliseconds())
 		elem = elem.Next()
 	}
 }

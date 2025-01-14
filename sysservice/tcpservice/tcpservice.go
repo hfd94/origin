@@ -139,7 +139,7 @@ func (slf *Client) GetId() string {
 func (slf *Client) Run() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(r)
 		}
 	}()
 
@@ -152,7 +152,7 @@ func (slf *Client) Run() {
 		slf.tcpConn.SetReadDeadline(slf.tcpService.tcpServer.ReadDeadline)
 		bytes, err := slf.tcpConn.ReadMsg()
 		if err != nil {
-			log.Debug("read client failed", log.ErrorField("error", err), log.String("clientId", slf.id))
+			log.Debugf("read client failed:%s,clientId:%s", err, slf.id)
 			break
 		}
 		data, err := slf.tcpService.process.Unmarshal(slf.id, bytes)

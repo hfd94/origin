@@ -50,7 +50,7 @@ func (nc *NatsClient) Go(nodeId string, timeout time.Duration, rpcHandler IRpcHa
 	_, processor := GetProcessorType(args)
 	InParam, err := processor.Marshal(args)
 	if err != nil {
-		log.Error("Marshal is fail", log.ErrorField("error", err))
+		log.Errorf("marshal is fail:%s", err)
 		call := MakeCall()
 		call.DoError(err)
 		return call

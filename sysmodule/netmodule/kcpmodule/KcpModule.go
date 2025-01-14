@@ -166,7 +166,7 @@ func (km *KcpModule) NewAgent(conn network.Conn) network.Agent {
 func (c *Client) Run() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.StackError(fmt.Sprint(r))
+			log.Error(r)
 		}
 	}()
 
@@ -175,7 +175,7 @@ func (c *Client) Run() {
 		c.kcpConn.SetReadDeadline(*c.kcpModule.kcpCfg.ReadDeadlineMill)
 		msgBuff, err := c.kcpConn.ReadMsg()
 		if err != nil {
-			log.Debug("read client failed", log.ErrorField("error", err), log.String("clientId", c.id))
+			log.Debugf("read client failed,error:%s,clientId:%s", err, c.id)
 			break
 		}
 

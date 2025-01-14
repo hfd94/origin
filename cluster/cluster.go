@@ -128,7 +128,7 @@ func (cls *Cluster) DelNode(nodeId string) {
 		nodeRpc.client.Close(false)
 	}
 
-	log.Info("remove node ", log.String("NodeId", nodeRpc.nodeInfo.NodeId), log.String("ListenAddr", nodeRpc.nodeInfo.ListenAddr))
+	log.Debugf("remove node,NodeId:%s,ListenAddr:%s", nodeRpc.nodeInfo.NodeId, nodeRpc.nodeInfo.ListenAddr)
 }
 
 func (cls *Cluster) serviceDiscoveryDelNode(nodeId string) {
@@ -208,7 +208,7 @@ func (cls *Cluster) serviceDiscoverySetNodeInfo(nodeInfo *NodeInfo) {
 	}
 
 	if lastNodeInfo != nil {
-		log.Info("Discovery nodeId", log.String("NodeId", nodeInfo.NodeId), log.Any("services:", nodeInfo.PublicServiceList), log.Bool("Retire", nodeInfo.Retire))
+		log.Debugf("Discovery nodeId,NodeId:%s,services:%s,Retire:%t", nodeInfo.NodeId, nodeInfo.PublicServiceList, nodeInfo.Retire)
 		lastNodeInfo.nodeInfo = *nodeInfo
 		return
 	}
@@ -224,9 +224,9 @@ func (cls *Cluster) serviceDiscoverySetNodeInfo(nodeInfo *NodeInfo) {
 	}
 	cls.mapRpc[nodeInfo.NodeId] = &rpcInfo
 	if cls.IsNatsMode() == true || cls.discoveryInfo.discoveryType != OriginType {
-		log.Info("Discovery nodeId and new rpc client", log.String("NodeId", nodeInfo.NodeId), log.Any("services:", nodeInfo.PublicServiceList), log.Bool("Retire", nodeInfo.Retire))
+		log.Debugf("Discovery nodeId and new rpc client,NodeId:%s,services:%s,Retire:%t", nodeInfo.NodeId, nodeInfo.PublicServiceList, nodeInfo.Retire)
 	} else {
-		log.Info("Discovery nodeId and new rpc client", log.String("NodeId", nodeInfo.NodeId), log.Any("services:", nodeInfo.PublicServiceList), log.Bool("Retire", nodeInfo.Retire), log.String("nodeListenAddr", nodeInfo.ListenAddr))
+		log.Debugf("Discovery nodeId and new rpc client,NodeId:%s,services:%s,Retire:%t,nodeListenAddr:%d", nodeInfo.NodeId, nodeInfo.PublicServiceList, nodeInfo.Retire, nodeInfo.ListenAddr)
 	}
 }
 
@@ -250,7 +250,7 @@ func (cls *Cluster) Init(localNodeId string, setupServiceFun SetupServiceFun) er
 	//2.安装服务发现结点
 	err = cls.setupDiscovery(localNodeId, setupServiceFun)
 	if err != nil {
-		log.Error("setupDiscovery fail", log.ErrorField("err", err))
+		log.Errorf("setupDiscovery fail:%s", err)
 		return err
 	}
 	service.RegRpcEventFun = cls.RegRpcEvent
