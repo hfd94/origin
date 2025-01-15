@@ -8,8 +8,8 @@ require (
 	github.com/IBM/sarama v1.43.3
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/goccy/go-json v0.10.2
-	github.com/gogo/protobuf v1.3.2
 	github.com/gomodule/redigo v1.8.8
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.0
@@ -46,6 +46,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect

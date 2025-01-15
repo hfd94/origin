@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"github.com/duanhf2012/origin/v2/cluster"
+	"github.com/duanhf2012/origin/v2/config"
 	"github.com/duanhf2012/origin/v2/console"
 	"github.com/duanhf2012/origin/v2/log"
 	"github.com/duanhf2012/origin/v2/profiler"
@@ -59,6 +60,14 @@ func init() {
 	console.RegisterCommandString("pprof", "", "<-pprof ip:port> Open performance analysis.", setPprof)
 }
 
+func Start() {
+	err := console.Run(os.Args)
+	if err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+}
+
 func notifyAllServiceRetire() {
 	service.NotifyAllServiceRetire()
 }
@@ -108,9 +117,10 @@ func setConfigPath(val interface{}) error {
 	if err != nil {
 		return fmt.Errorf("cannot find file path %s", configPath)
 	}
-
-	cluster.SetConfigDir(configPath)
-	configDir = configPath
+	config.SetClusterPath(val.(string))
+	//
+	//cluster.SetConfigDir(configPath)
+	//configDir = configPath
 	return nil
 }
 
@@ -208,14 +218,6 @@ func initNode(id string) {
 	service.Init()
 }
 
-func Start() {
-	err := console.Run(os.Args)
-	if err != nil {
-		fmt.Printf("%+v\n", err)
-		return
-	}
-}
-
 func retireNode(args interface{}) error {
 	//1.解析参数
 	param := args.(string)
@@ -273,12 +275,16 @@ func stopNode(args interface{}) error {
 }
 
 func startNode(args interface{}) error {
+	// 初始化系统配置
+	if err := config.ClusterLoad(); err != nil {
+		log.Fatalf("system load err %s", err)
+	}
 	//1.解析参数
 	param := args.(string)
 	if param == "" {
 		return nil
 	}
-
+	//
 	sParam := strings.Split(param, "=")
 	if len(sParam) != 2 {
 		return fmt.Errorf("invalid option %s", param)
@@ -286,6 +292,7 @@ func startNode(args interface{}) error {
 	if sParam[0] != "nodeid" {
 		return fmt.Errorf("invalid option %s", param)
 	}
+
 	strNodeId := strings.TrimSpace(sParam[1])
 	if strNodeId == "" {
 		return fmt.Errorf("invalid option %s", param)

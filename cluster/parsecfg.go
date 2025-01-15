@@ -3,8 +3,10 @@ package cluster
 import (
 	"errors"
 	"fmt"
+	"github.com/duanhf2012/origin/v2/config"
 	"github.com/duanhf2012/origin/v2/log"
 	"github.com/duanhf2012/origin/v2/rpc"
+	"github.com/go-viper/mapstructure/v2"
 	jsoniter "github.com/json-iterator/go"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -15,15 +17,14 @@ import (
 
 var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
-
 type EtcdList struct {
 	NetworkName []string
 	Endpoints   []string
-	UserName string
-	Password string
-	Cert string
-	CertKey string
-	Ca string
+	UserName    string
+	Password    string
+	Cert        string
+	CertKey     string
+	Ca          string
 }
 
 type EtcdDiscovery struct {
@@ -60,7 +61,7 @@ type NatsConfig struct {
 }
 
 type RpcMode struct {
-	Typ  string `json:"Type"`
+	Typ  string `json:"Type" mapstructure:"Type"`
 	Nats NatsConfig
 }
 
@@ -197,31 +198,15 @@ func (d *DiscoveryInfo) setOrigin(originDiscovery *OriginDiscovery) error {
 	return nil
 }
 
-func (cls *Cluster) ReadClusterConfig(filepath string) (*NodeInfoList, error) {
+func (cls *Cluster) ReadClusterConfig() (*NodeInfoList, error) {
 	c := &NodeInfoList{}
-	d, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	err = unmarshalConfig(d, c)
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
+	ms := config.GetSystemConfig()
+	err := mapstructure.Decode(ms, c)
+	return c, err
 }
 
-func (cls *Cluster) readServiceConfig(filepath string) (interface{}, map[string]interface{}, map[string]map[string]interface{}, error) {
-	c := map[string]interface{}{}
-	//读取配置
-	d, err := os.ReadFile(filepath)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	err = unmarshalConfig(d, &c)
-	if err != nil {
-		return nil, nil, nil, err
-	}
+func (cls *Cluster) readServiceConfig() (interface{}, map[string]interface{}, map[string]map[string]interface{}, error) {
+	c := config.GetSystemConfig()
 
 	GlobalCfg, ok := c["Global"]
 	serviceConfig := map[string]interface{}{}
@@ -277,38 +262,21 @@ func (cls *Cluster) readLocalClusterConfig(nodeId string) (DiscoveryInfo, []Node
 	var discoveryInfo DiscoveryInfo
 	var rpcMode RpcMode
 
-	clusterCfgPath := strings.TrimRight(configDir, "/") + "/cluster"
-	fileInfoList, err := os.ReadDir(clusterCfgPath)
+	fileNodeInfoList, _ := cls.ReadClusterConfig()
+
+	err := cls.SetRpcMode(&fileNodeInfoList.RpcMode, &rpcMode)
 	if err != nil {
-		return discoveryInfo, nil, rpcMode, fmt.Errorf("read dir %s is fail :%+v", clusterCfgPath, err)
+		return discoveryInfo, nil, rpcMode, err
 	}
 
-	//读取任何文件,只读符合格式的配置,目录下的文件可以自定义分文件
-	for _, f := range fileInfoList {
-		if !validConfigFile(f) {
-			continue
-		}
+	err = discoveryInfo.setDiscovery(&fileNodeInfoList.Discovery)
+	if err != nil {
+		return discoveryInfo, nil, rpcMode, err
+	}
 
-		filePath := strings.TrimRight(strings.TrimRight(clusterCfgPath, "/"), "\\") + "/" + f.Name()
-		fileNodeInfoList, rErr := cls.ReadClusterConfig(filePath)
-		if rErr != nil {
-			return discoveryInfo, nil, rpcMode, fmt.Errorf("read file path %s is error:%+v", filePath, rErr)
-		}
-
-		err = cls.SetRpcMode(&fileNodeInfoList.RpcMode, &rpcMode)
-		if err != nil {
-			return discoveryInfo, nil, rpcMode, err
-		}
-
-		err = discoveryInfo.setDiscovery(&fileNodeInfoList.Discovery)
-		if err != nil {
-			return discoveryInfo, nil, rpcMode, err
-		}
-
-		for _, nodeInfo := range fileNodeInfoList.NodeList {
-			if nodeInfo.NodeId == nodeId || nodeId == rpc.NodeIdNull {
-				nodeInfoList = append(nodeInfoList, nodeInfo)
-			}
+	for _, nodeInfo := range fileNodeInfoList.NodeList {
+		if nodeInfo.NodeId == nodeId || nodeId == rpc.NodeIdNull {
+			nodeInfoList = append(nodeInfoList, nodeInfo)
 		}
 	}
 
@@ -331,68 +299,52 @@ func (cls *Cluster) readLocalClusterConfig(nodeId string) (DiscoveryInfo, []Node
 }
 
 func (cls *Cluster) readLocalService(localNodeId string) error {
-	clusterCfgPath := strings.TrimRight(configDir, "/") + "/cluster"
-	fileInfoList, err := os.ReadDir(clusterCfgPath)
-	if err != nil {
-		return fmt.Errorf("read dir %s is fail :%+v", clusterCfgPath, err)
-	}
-
 	var globalCfg interface{}
 	publicService := map[string]interface{}{}
 	nodeService := map[string]interface{}{}
 
 	//读取任何文件,只读符合格式的配置,目录下的文件可以自定义分文件
-	for _, f := range fileInfoList {
-		if !validConfigFile(f) {
-			continue
-		}
+	currGlobalCfg, serviceConfig, mapNodeService, _ := cls.readServiceConfig()
 
-		filePath := strings.TrimRight(strings.TrimRight(clusterCfgPath, "/"), "\\") + "/" + f.Name()
-		currGlobalCfg, serviceConfig, mapNodeService, err := cls.readServiceConfig(filePath)
-		if err != nil {
-			continue
+	if currGlobalCfg != nil {
+		//不允许重复的配置global配置
+		if globalCfg != nil {
+			return fmt.Errorf("[Global] does not allow repeated configuration in")
 		}
+		globalCfg = currGlobalCfg
+	}
 
-		if currGlobalCfg != nil {
-			//不允许重复的配置global配置
-			if globalCfg != nil {
-				return fmt.Errorf("[Global] does not allow repeated configuration in %s", f.Name())
+	//保存公共配置
+	for _, s := range cls.localNodeInfo.ServiceList {
+		for {
+			splitServiceName := strings.Split(s, ":")
+			if len(splitServiceName) == 2 {
+				s = splitServiceName[0]
 			}
-			globalCfg = currGlobalCfg
-		}
+			//取公共服务配置
+			pubCfg, ok := serviceConfig[s]
+			if ok == true {
+				if _, publicOk := publicService[s]; publicOk == true {
+					return fmt.Errorf("public service [%s] does not allow repeated configuration in", s)
+				}
+				publicService[s] = pubCfg
+			}
 
-		//保存公共配置
-		for _, s := range cls.localNodeInfo.ServiceList {
-			for {
-				splitServiceName := strings.Split(s, ":")
-				if len(splitServiceName) == 2 {
-					s = splitServiceName[0]
-				}
-				//取公共服务配置
-				pubCfg, ok := serviceConfig[s]
-				if ok == true {
-					if _, publicOk := publicService[s]; publicOk == true {
-						return fmt.Errorf("public service [%s] does not allow repeated configuration in %s", s, f.Name())
-					}
-					publicService[s] = pubCfg
-				}
-
-				//取指定结点配置的服务
-				nodeServiceCfg, ok := mapNodeService[localNodeId]
-				if ok == false {
-					break
-				}
-				nodeCfg, ok := nodeServiceCfg[s]
-				if ok == false {
-					break
-				}
-
-				if _, nodeOK := nodeService[s]; nodeOK == true {
-					return fmt.Errorf("NodeService NodeId[%s] Service[%s] does not allow repeated configuration in %s", cls.localNodeInfo.NodeId, s, f.Name())
-				}
-				nodeService[s] = nodeCfg
+			//取指定结点配置的服务
+			nodeServiceCfg, ok := mapNodeService[localNodeId]
+			if ok == false {
 				break
 			}
+			nodeCfg, ok := nodeServiceCfg[s]
+			if ok == false {
+				break
+			}
+
+			if _, nodeOK := nodeService[s]; nodeOK == true {
+				return fmt.Errorf("NodeService NodeId[%s] Service[%s] does not allow repeated configuration in %s", cls.localNodeInfo.NodeId, s)
+			}
+			nodeService[s] = nodeCfg
+			break
 		}
 	}
 
@@ -423,7 +375,7 @@ func (cls *Cluster) readLocalService(localNodeId string) error {
 	return nil
 }
 
-func (cls *Cluster) parseLocalCfg() error{
+func (cls *Cluster) parseLocalCfg() error {
 	rpcInfo := NodeRpcInfo{}
 	rpcInfo.nodeInfo = cls.localNodeInfo
 	rpcInfo.client = rpc.NewLClient(rpcInfo.nodeInfo.NodeId, &cls.callSet)
@@ -445,7 +397,7 @@ func (cls *Cluster) parseLocalCfg() error{
 			cls.mapServiceNode[serviceName] = make(map[string]struct{})
 		}
 
-		if _,ok:=cls.mapServiceNode[serviceName][cls.localNodeInfo.NodeId];ok {
+		if _, ok := cls.mapServiceNode[serviceName][cls.localNodeInfo.NodeId]; ok {
 			return fmt.Errorf("duplicate service %s is configured in node %s", serviceName, cls.localNodeInfo.NodeId)
 		}
 		cls.mapServiceNode[serviceName][cls.localNodeInfo.NodeId] = struct{}{}
@@ -470,9 +422,7 @@ func (cls *Cluster) InitCfg(localNodeId string) error {
 
 	//加载本地结点的NodeList配置
 	discoveryInfo, nodeInfoList, rpcMode, err := cls.readLocalClusterConfig(localNodeId)
-	if err != nil {
-		return err
-	}
+
 	cls.localNodeInfo = nodeInfoList[0]
 	cls.discoveryInfo = discoveryInfo
 	cls.rpcMode = rpcMode
